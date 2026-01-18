@@ -13,6 +13,7 @@ import {
     StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { tokenStorage } from '../utils/tokenStorage';
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
@@ -39,6 +40,10 @@ const LoginScreen = ({ navigation }) => {
             const data = await response.json();
 
             if (response.ok) {
+                // Store tokens in AsyncStorage
+                if (data.accessToken && data.refreshToken) {
+                    await tokenStorage.setTokens(data.accessToken, data.refreshToken);
+                }
                 Alert.alert('Success', 'Login successful!');
                 navigation.navigate('Home');
             } else {
