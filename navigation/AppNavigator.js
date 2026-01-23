@@ -3,6 +3,8 @@ import { createStackNavigator } from '@react-navigation/stack';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/Home/home';
+import MarketplaceScreen from '../screens/Marketplace/Marketplace';
+import TopRatedScreen from '../screens/TopRated/TopRated';
 
 const Stack = createStackNavigator();
 
@@ -39,6 +41,20 @@ const AppNavigator = () => {
             <Stack.Screen
                 name="Home"
                 component={HomeScreen}
+                options={{
+                    animationEnabled: true,
+                }}
+            />
+            <Stack.Screen
+                name="Marketplace"
+                component={MarketplaceScreen}
+                options={{
+                    animationEnabled: true,
+                }}
+            />
+            <Stack.Screen
+                name="TopRated"
+                component={TopRatedScreen}
                 options={{
                     animationEnabled: true,
                 }}
