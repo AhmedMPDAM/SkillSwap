@@ -1,0 +1,1044 @@
+import React, { useState, useEffect } from 'react';
+import {
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    StyleSheet,
+    ScrollView,
+    Alert,
+    ActivityIndicator,
+    StatusBar,
+    Image,
+    Modal,
+    FlatList,
+    KeyboardAvoidingView,
+    Platform,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import { tokenStorage } from '../../utils/tokenStorage';
+
+
+
+
+const ProfileScreen = ({ navigation }) => {
+    const [profile, setProfile] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+
+    // Profile fields
+    const [fullName, setFullName] = useState('');
+    const [bio, setBio] = useState('');
+    const [location, setLocation] = useState('');
+    const [profileImage, setProfileImage] = useState(null);
+    const [profileImageFile, setProfileImageFile] = useState(null);
+
+    // Social links
+    const [socialLinks, setSocialLinks] = useState({
+        facebook: '',
+        instagram: '',
+        twitter: '',
+        linkedin: '',
+        github: '',
+        portfolio: '',
+    });
+
+    // Certificates
+    const [certificates, setCertificates] = useState([]);
+    const [showCertificateModal, setShowCertificateModal] = useState(false);
+    const [editingCertificate, setEditingCertificate] = useState(null);
+    const [certificateForm, setCertificateForm] = useState({
+        name: '',
+        date: '',
+        issuedBy: '',
+        documentFile: null,
+    });
+
+    const API_URL = 'https://zoologically-unindentured-sol.ngrok-free.dev/api';
+    const BASE_URL = 'https://zoologically-unindentured-sol.ngrok-free.dev';
+
+    useEffect(() => {
+        fetchProfile();
+    }, []);
+
+    // Helper function to construct full image URL
+    const getImageUrl = (imagePath) => {
+        if (!imagePath) return null;
+        // If it's already a full URL, return as is
+        if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+            return imagePath;
+        }
+        // If it's a relative path, construct full URL
+        if (imagePath.startsWith('/')) {
+            return `${BASE_URL}${imagePath}`;
+        }
+        // Otherwise, assume it's relative to uploads
+        return `${BASE_URL}/uploads/${imagePath}`;
+    };
+
+    const fetchProfile = async () => {
+        try {
+            setLoading(true);
+            const accessToken = await tokenStorage.getAccessToken();
+
+            if (!accessToken) {
+                Alert.alert('Error', 'Please login to view your profile');
+                navigation.navigate('Login');
+                setLoading(false);
+                return;
+            }
+
+            const response = await fetch(`${API_URL}/profile`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true', // Required for ngrok
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setProfile(data);
+                
+                // Populate form fields with existing user data
+                // Handle case where user might not have profile data yet
+                setFullName(data.fullName || '');
+                setBio(data.bio || '');
+                setLocation(data.location || '');
+                
+                // Construct full URL for profile image
+                const imageUrl = getImageUrl(data.profileImage);
+                setProfileImage(imageUrl);
+                
+                // Populate social links - handle both object and undefined cases
+                if (data.socialLinks && typeof data.socialLinks === 'object') {
+                    setSocialLinks({
+                        facebook: data.socialLinks.facebook || '',
+                        instagram: data.socialLinks.instagram || '',
+                        twitter: data.socialLinks.twitter || '',
+                        linkedin: data.socialLinks.linkedin || '',
+                        github: data.socialLinks.github || '',
+                        portfolio: data.socialLinks.portfolio || '',
+                    });
+                } else {
+                    setSocialLinks({
+                        facebook: '',
+                        instagram: '',
+                        twitter: '',
+                        linkedin: '',
+                        github: '',
+                        portfolio: '',
+                    });
+                }
+                
+                // Populate certificates
+                setCertificates(Array.isArray(data.certificates) ? data.certificates : []);
+            } else if (response.status === 401 || response.status === 403) {
+                const errorData = await response.json().catch(() => ({}));
+                Alert.alert('Session Expired', 'Please login again');
+                navigation.navigate('Login');
+            } else if (response.status === 404) {
+                // User doesn't have profile data yet - that's okay, show empty form
+                setProfile({ email: null }); // Set minimal profile to allow form to show
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                // Don't block the UI - allow user to still edit
+                Alert.alert('Warning', errorData.message || `Could not load existing profile (Status: ${response.status}). You can still update your profile.`);
+            }
+        } catch (error) {
+            // Don't block the UI - allow user to still edit even if fetch fails
+            Alert.alert('Warning', `Could not load profile: ${error.message}. You can still update your profile.`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const pickImage = async () => {
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+            });
+
+            if (!result.canceled) {
+                setProfileImage(result.assets[0].uri);
+                setProfileImageFile(result.assets[0]);
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Failed to pick image');
+        }
+    };
+
+    const takePhoto = async () => {
+        try {
+            const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+            });
+
+            if (!result.canceled) {
+                setProfileImage(result.assets[0].uri);
+                setProfileImageFile(result.assets[0]);
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Failed to take photo');
+        }
+    };
+
+    const pickDocument = async () => {
+        try {
+            const result = await DocumentPicker.getDocumentAsync({
+                type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+            });
+
+            if (result.type === 'success') {
+                setCertificateForm({ ...certificateForm, documentFile: result });
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Failed to pick document');
+        }
+    };
+
+    const saveProfile = async () => {
+        try {
+            if (!fullName.trim()) {
+                Alert.alert('Error', 'Full name is required');
+                return;
+            }
+
+            setSaving(true);
+            const accessToken = await tokenStorage.getAccessToken();
+
+            if (!accessToken) {
+                Alert.alert('Error', 'Please login to update your profile');
+                navigation.navigate('Login');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('fullName', fullName.trim());
+            formData.append('bio', bio.trim());
+            formData.append('location', location.trim());
+            formData.append('socialLinks', JSON.stringify(socialLinks));
+
+            if (profileImageFile) {
+                formData.append('profileImage', {
+                    uri: profileImageFile.uri,
+                    type: profileImageFile.type || 'image/jpeg',
+                    name: profileImageFile.fileName || `profile-${Date.now()}.jpg`,
+                });
+            }
+
+            const response = await fetch(`${API_URL}/profile`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'ngrok-skip-browser-warning': 'true', // Required for ngrok
+                },
+                body: formData,
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const updatedUser = data.user || data;
+                
+                // Update profile state
+                setProfile(updatedUser);
+                
+                // Update profile image URL if it was changed
+                if (updatedUser.profileImage) {
+                    const imageUrl = getImageUrl(updatedUser.profileImage);
+                    setProfileImage(imageUrl);
+                }
+                
+                // Clear the file reference since it's been uploaded
+                setProfileImageFile(null);
+                
+                Alert.alert('Success', 'Profile updated successfully!');
+            } else if (response.status === 401 || response.status === 403) {
+                Alert.alert('Session Expired', 'Please login again');
+                navigation.navigate('Login');
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                Alert.alert('Error', errorData.message || 'Failed to update profile');
+            }
+        } catch (error) {
+            console.error('Profile save error:', error);
+            Alert.alert('Error', 'Network error. Please check your connection and try again.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleAddCertificate = async () => {
+        try {
+            if (!certificateForm.name.trim() || !certificateForm.date || !certificateForm.issuedBy.trim()) {
+                Alert.alert('Error', 'Please fill in all required fields');
+                return;
+            }
+
+            setSaving(true);
+            const accessToken = await tokenStorage.getAccessToken();
+
+            const formData = new FormData();
+            formData.append('name', certificateForm.name);
+            formData.append('date', certificateForm.date);
+            formData.append('issuedBy', certificateForm.issuedBy);
+
+            if (certificateForm.documentFile) {
+                formData.append('document', {
+                    uri: certificateForm.documentFile.uri,
+                    type: certificateForm.documentFile.mimeType || 'application/pdf',
+                    name: certificateForm.documentFile.name,
+                });
+            }
+
+            const response = await fetch(`${API_URL}/profile/certificates`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'ngrok-skip-browser-warning': 'true', // Required for ngrok
+                },
+                body: formData,
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setCertificates(data.user.certificates || []);
+                setShowCertificateModal(false);
+                resetCertificateForm();
+                Alert.alert('Success', 'Certificate added successfully!');
+            } else {
+                Alert.alert('Error', 'Failed to add certificate');
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Network error. Please try again.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleUpdateCertificate = async () => {
+        try {
+            if (!certificateForm.name.trim() || !certificateForm.date || !certificateForm.issuedBy.trim()) {
+                Alert.alert('Error', 'Please fill in all required fields');
+                return;
+            }
+
+            setSaving(true);
+            const accessToken = await tokenStorage.getAccessToken();
+
+            const formData = new FormData();
+            formData.append('name', certificateForm.name);
+            formData.append('date', certificateForm.date);
+            formData.append('issuedBy', certificateForm.issuedBy);
+
+            if (certificateForm.documentFile) {
+                formData.append('document', {
+                    uri: certificateForm.documentFile.uri,
+                    type: certificateForm.documentFile.mimeType || 'application/pdf',
+                    name: certificateForm.documentFile.name,
+                });
+            }
+
+            const response = await fetch(`${API_URL}/profile/certificates/${editingCertificate._id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'ngrok-skip-browser-warning': 'true', // Required for ngrok
+                },
+                body: formData,
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setCertificates(data.user.certificates || []);
+                setShowCertificateModal(false);
+                resetCertificateForm();
+                Alert.alert('Success', 'Certificate updated successfully!');
+            } else {
+                Alert.alert('Error', 'Failed to update certificate');
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Network error. Please try again.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDeleteCertificate = async (certificateId) => {
+        Alert.alert(
+            'Delete Certificate',
+            'Are you sure you want to delete this certificate?',
+            [
+                { text: 'Cancel', onPress: () => {}, style: 'cancel' },
+                {
+                    text: 'Delete',
+                    onPress: async () => {
+                        try {
+                            setSaving(true);
+                            const accessToken = await tokenStorage.getAccessToken();
+
+                            const response = await fetch(`${API_URL}/profile/certificates/${certificateId}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Authorization': `Bearer ${accessToken}`,
+                                    'ngrok-skip-browser-warning': 'true', // Required for ngrok
+                                },
+                            });
+
+                            if (response.ok) {
+                                const data = await response.json();
+                                setCertificates(data.user.certificates || []);
+                                Alert.alert('Success', 'Certificate deleted successfully!');
+                            } else {
+                                Alert.alert('Error', 'Failed to delete certificate');
+                            }
+                        } catch (error) {
+                            Alert.alert('Error', 'Network error. Please try again.');
+                        } finally {
+                            setSaving(false);
+                        }
+                    },
+                    style: 'destructive',
+                },
+            ]
+        );
+    };
+
+    const openCertificateForm = (certificate = null) => {
+        if (certificate) {
+            setEditingCertificate(certificate);
+            setCertificateForm({
+                name: certificate.name,
+                date: certificate.date,
+                issuedBy: certificate.issuedBy,
+                documentFile: null,
+            });
+        } else {
+            setEditingCertificate(null);
+            resetCertificateForm();
+        }
+        setShowCertificateModal(true);
+    };
+
+    const resetCertificateForm = () => {
+        setCertificateForm({
+            name: '',
+            date: '',
+            issuedBy: '',
+            documentFile: null,
+        });
+        setEditingCertificate(null);
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    };
+
+    if (loading) {
+        return (
+            <View style={styles.centerContainer}>
+                <ActivityIndicator size="large" color="#007AFF" />
+            </View>
+        );
+    }
+
+    return (
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+        >
+            <View style={styles.container}>
+                <StatusBar barStyle="dark-content" />
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={styles.scrollContent}
+                >
+                    {/* Profile Header */}
+                    <View style={styles.profileHeader}>
+                        <TouchableOpacity
+                            style={styles.profileImageContainer}
+                            onPress={pickImage}
+                        >
+                            {profileImage ? (
+                                <Image
+                                    source={{ uri: profileImage }}
+                                    style={styles.profileImage}
+                                />
+                            ) : (
+                                <Ionicons name="person-circle-outline" size={120} color="#007AFF" />
+                            )}
+                            <View style={styles.cameraButton}>
+                                <Ionicons name="camera" size={20} color="#fff" />
+                            </View>
+                        </TouchableOpacity>
+                        <Text style={styles.profileName}>{fullName || 'Your Name'}</Text>
+                    </View>
+
+                    {/* Basic Information */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Basic Information</Text>
+
+                        {profile?.email && (
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Email</Text>
+                                <View style={styles.readOnlyInput}>
+                                    <Ionicons name="mail" size={20} color="#666" />
+                                    <Text style={styles.readOnlyText}>{profile.email}</Text>
+                                </View>
+                            </View>
+                        )}
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Full Name *</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Enter your full name"
+                                value={fullName}
+                                onChangeText={setFullName}
+                                placeholderTextColor="#999"
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Bio</Text>
+                            <TextInput
+                                style={[styles.input, styles.textArea]}
+                                placeholder="Tell us about yourself"
+                                value={bio}
+                                onChangeText={setBio}
+                                multiline
+                                numberOfLines={4}
+                                placeholderTextColor="#999"
+                                textAlignVertical="top"
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Location</Text>
+                            <View style={styles.inputWithIcon}>
+                                <Ionicons name="location" size={20} color="#007AFF" />
+                                <TextInput
+                                    style={styles.inputWithIconText}
+                                    placeholder="Enter your location"
+                                    value={location}
+                                    onChangeText={setLocation}
+                                    placeholderTextColor="#999"
+                                />
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Social Links */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Social Links</Text>
+
+                        {Object.keys(socialLinks).map((key) => (
+                            <View key={key} style={styles.inputGroup}>
+                                <Text style={styles.label}>
+                                    {key.charAt(0).toUpperCase() + key.slice(1)}
+                                </Text>
+                                <View style={styles.inputWithIcon}>
+                                    <Ionicons
+                                        name={getSocialIcon(key)}
+                                        size={20}
+                                        color="#007AFF"
+                                    />
+                                    <TextInput
+                                        style={styles.inputWithIconText}
+                                        placeholder={`Your ${key} profile link`}
+                                        value={socialLinks[key]}
+                                        onChangeText={(text) =>
+                                            setSocialLinks({ ...socialLinks, [key]: text })
+                                        }
+                                        placeholderTextColor="#999"
+                                    />
+                                </View>
+                            </View>
+                        ))}
+                    </View>
+
+                    {/* Certificates */}
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Certificates</Text>
+                            <TouchableOpacity
+                                style={styles.addButton}
+                                onPress={() => openCertificateForm()}
+                            >
+                                <Ionicons name="add" size={24} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {certificates.length > 0 ? (
+                            certificates.map((cert) => (
+                                <View key={cert._id} style={styles.certificateCard}>
+                                    <View style={styles.certificateHeader}>
+                                        <View style={styles.certificateInfo}>
+                                            <Text style={styles.certificateName}>{cert.name}</Text>
+                                            <Text style={styles.certificateDate}>
+                                                {formatDate(cert.date)}
+                                            </Text>
+                                            <Text style={styles.certificateIssuer}>
+                                                Issued by: {cert.issuedBy}
+                                            </Text>
+                                        </View>
+                                        <View style={styles.certificateActions}>
+                                            <TouchableOpacity
+                                                onPress={() => openCertificateForm(cert)}
+                                                style={styles.iconButton}
+                                            >
+                                                <Ionicons name="pencil" size={20} color="#007AFF" />
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                onPress={() => handleDeleteCertificate(cert._id)}
+                                                style={[styles.iconButton, styles.deleteButton]}
+                                            >
+                                                <Ionicons name="trash" size={20} color="#FF3B30" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                    {cert.documentUrl && (
+                                        <TouchableOpacity 
+                                            style={styles.documentLink}
+                                            onPress={() => {
+                                                const docUrl = getImageUrl(cert.documentUrl);
+                                                if (docUrl) {
+                                                    // You can open the URL in a browser or handle it as needed
+                                                    Alert.alert('Document', `Document URL: ${docUrl}`);
+                                                }
+                                            }}
+                                        >
+                                            <Ionicons name="document" size={16} color="#007AFF" />
+                                            <Text style={styles.documentLinkText}>
+                                                View Document
+                                            </Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            ))
+                        ) : (
+                            <Text style={styles.emptyText}>No certificates yet. Add one to get started!</Text>
+                        )}
+                    </View>
+
+                    {/* Save Button */}
+                    <TouchableOpacity
+                        style={[styles.saveButton, saving && styles.disabledButton]}
+                        onPress={saveProfile}
+                        disabled={saving}
+                    >
+                        {saving ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <>
+                                <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                                <Text style={styles.saveButtonText}>Save Profile</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
+
+                    <View style={styles.spacing} />
+                </ScrollView>
+
+                {/* Certificate Modal */}
+                <Modal
+                    visible={showCertificateModal}
+                    animationType="slide"
+                    transparent={true}
+                >
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>
+                                    {editingCertificate ? 'Edit Certificate' : 'Add Certificate'}
+                                </Text>
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        setShowCertificateModal(false);
+                                        resetCertificateForm();
+                                    }}
+                                >
+                                    <Ionicons name="close" size={28} color="#000" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <ScrollView style={styles.modalScroll}>
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>Certificate Name *</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="e.g., AWS Certified Solutions Architect"
+                                        value={certificateForm.name}
+                                        onChangeText={(text) =>
+                                            setCertificateForm({ ...certificateForm, name: text })
+                                        }
+                                        placeholderTextColor="#999"
+                                    />
+                                </View>
+
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>Date Issued *</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="YYYY-MM-DD"
+                                        value={certificateForm.date}
+                                        onChangeText={(text) =>
+                                            setCertificateForm({ ...certificateForm, date: text })
+                                        }
+                                        placeholderTextColor="#999"
+                                    />
+                                </View>
+
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>Issued By *</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="e.g., Amazon Web Services"
+                                        value={certificateForm.issuedBy}
+                                        onChangeText={(text) =>
+                                            setCertificateForm({ ...certificateForm, issuedBy: text })
+                                        }
+                                        placeholderTextColor="#999"
+                                    />
+                                </View>
+
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>Upload Document (Optional)</Text>
+                                    <TouchableOpacity
+                                        style={styles.documentButton}
+                                        onPress={pickDocument}
+                                    >
+                                        <Ionicons name="document-attach" size={20} color="#007AFF" />
+                                        <Text style={styles.documentButtonText}>
+                                            {certificateForm.documentFile
+                                                ? certificateForm.documentFile.name
+                                                : 'Choose File'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                <TouchableOpacity
+                                    style={[styles.modalButton, saving && styles.disabledButton]}
+                                    onPress={editingCertificate ? handleUpdateCertificate : handleAddCertificate}
+                                    disabled={saving}
+                                >
+                                    {saving ? (
+                                        <ActivityIndicator color="#fff" />
+                                    ) : (
+                                        <Text style={styles.modalButtonText}>
+                                            {editingCertificate ? 'Update Certificate' : 'Add Certificate'}
+                                        </Text>
+                                    )}
+                                </TouchableOpacity>
+                            </ScrollView>
+                        </View>
+                    </View>
+                </Modal>
+            </View>
+        </KeyboardAvoidingView>
+    );
+};
+
+const getSocialIcon = (platform) => {
+    const iconMap = {
+        facebook: 'logo-facebook',
+        instagram: 'logo-instagram',
+        twitter: 'logo-twitter',
+        linkedin: 'logo-linkedin',
+        github: 'logo-github',
+        portfolio: 'globe',
+    };
+    return iconMap[platform] || 'link';
+};
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#f8f9fa',
+    },
+    centerContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f8f9fa',
+    },
+    scrollContent: {
+        paddingBottom: 20,
+    },
+    profileHeader: {
+        alignItems: 'center',
+        paddingVertical: 30,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+    },
+    profileImageContainer: {
+        position: 'relative',
+        marginBottom: 15,
+    },
+    profileImage: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: '#f0f0f0',
+    },
+    cameraButton: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        backgroundColor: '#007AFF',
+        borderRadius: 20,
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 3,
+        borderColor: '#fff',
+    },
+    profileName: {
+        fontSize: 24,
+        fontWeight: '600',
+        color: '#000',
+    },
+    section: {
+        backgroundColor: '#fff',
+        marginHorizontal: 15,
+        marginTop: 15,
+        paddingHorizontal: 15,
+        paddingVertical: 15,
+        borderRadius: 12,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 15,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#000',
+        marginBottom: 15,
+    },
+    inputGroup: {
+        marginBottom: 15,
+    },
+    label: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 8,
+    },
+    input: {
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        fontSize: 14,
+        color: '#000',
+        backgroundColor: '#f9f9f9',
+    },
+    textArea: {
+        paddingVertical: 12,
+        textAlignVertical: 'top',
+        minHeight: 100,
+    },
+    inputWithIcon: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        backgroundColor: '#f9f9f9',
+    },
+    inputWithIconText: {
+        flex: 1,
+        paddingVertical: 10,
+        paddingHorizontal: 8,
+        fontSize: 14,
+        color: '#000',
+    },
+    readOnlyInput: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        backgroundColor: '#f0f0f0',
+    },
+    readOnlyText: {
+        flex: 1,
+        paddingHorizontal: 8,
+        fontSize: 14,
+        color: '#666',
+    },
+    certificateCard: {
+        backgroundColor: '#f9f9f9',
+        borderLeftWidth: 4,
+        borderLeftColor: '#007AFF',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 12,
+    },
+    certificateHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    certificateInfo: {
+        flex: 1,
+    },
+    certificateName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#000',
+        marginBottom: 4,
+    },
+    certificateDate: {
+        fontSize: 12,
+        color: '#666',
+        marginBottom: 4,
+    },
+    certificateIssuer: {
+        fontSize: 12,
+        color: '#999',
+    },
+    certificateActions: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    iconButton: {
+        padding: 6,
+    },
+    deleteButton: {
+        marginLeft: 4,
+    },
+    documentLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 10,
+        paddingTop: 10,
+        borderTopWidth: 1,
+        borderTopColor: '#e0e0e0',
+    },
+    documentLinkText: {
+        color: '#007AFF',
+        fontSize: 12,
+        fontWeight: '500',
+        marginLeft: 6,
+    },
+    emptyText: {
+        textAlign: 'center',
+        color: '#999',
+        fontSize: 14,
+        fontStyle: 'italic',
+        paddingVertical: 20,
+    },
+    addButton: {
+        backgroundColor: '#007AFF',
+        borderRadius: 20,
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    saveButton: {
+        flexDirection: 'row',
+        backgroundColor: '#007AFF',
+        marginHorizontal: 15,
+        marginTop: 20,
+        paddingVertical: 14,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 10,
+    },
+    saveButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    disabledButton: {
+        opacity: 0.6,
+    },
+    modalContainer: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingTop: 20,
+        maxHeight: '90%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingBottom: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#000',
+    },
+    modalScroll: {
+        paddingHorizontal: 20,
+        paddingVertical: 20,
+    },
+    documentButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#007AFF',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        backgroundColor: '#f0f8ff',
+    },
+    documentButtonText: {
+        color: '#007AFF',
+        fontSize: 14,
+        fontWeight: '500',
+        marginLeft: 10,
+        flex: 1,
+    },
+    modalButton: {
+        backgroundColor: '#007AFF',
+        paddingVertical: 14,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 20,
+        marginBottom: 20,
+    },
+    modalButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    spacing: {
+        height: 20,
+    },
+});
+
+export default ProfileScreen;

@@ -5,6 +5,7 @@ import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/Home/home';
 import MarketplaceScreen from '../screens/Marketplace/Marketplace';
 import TopRatedScreen from '../screens/TopRated/TopRated';
+import ProfileScreen from '../screens/Profile/Profile';
 
 const Stack = createStackNavigator();
 
@@ -55,6 +56,13 @@ const AppNavigator = () => {
             <Stack.Screen
                 name="TopRated"
                 component={TopRatedScreen}
+                options={{
+                    animationEnabled: true,
+                }}
+            />
+            <Stack.Screen
+                name="Profile"
+                component={ProfileScreen}
                 options={{
                     animationEnabled: true,
                 }}

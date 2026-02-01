@@ -56,19 +56,6 @@ export const tokenStorage = {
     }
   },
 
-  // Remove tokens (logout)
-  async removeTokens() {
-    try {
-      await AsyncStorage.multiRemove([
-        TOKEN_KEYS.ACCESS_TOKEN,
-        TOKEN_KEYS.REFRESH_TOKEN,
-      ]);
-    } catch (error) {
-      console.error('Error removing tokens:', error);
-      throw error;
-    }
-  },
-
   // Check if user is authenticated
   async isAuthenticated() {
     try {

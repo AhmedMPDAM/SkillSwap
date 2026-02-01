@@ -26,7 +26,6 @@ const HomeScreen = ({ navigation }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [userCredits, setUserCredits] = useState(150);
     const [notifications, setNotifications] = useState(3);
-    const [isLoggingOut, setIsLoggingOut] = useState(false);
     const slideAnim = useRef(new Animated.Value(-width * 0.75)).current;
     const scrollViewRef = useRef(null);
 
@@ -110,7 +109,7 @@ const HomeScreen = ({ navigation }) => {
     };
 
     const handleQuickAction = (action) => {
-        switch(action) {
+        switch (action) {
             case 'Find Skills':
                 navigation.navigate('Marketplace');
                 break;
@@ -129,76 +128,6 @@ const HomeScreen = ({ navigation }) => {
     };
 
     const currentFeature = features[currentFeatureIndex];
-
-    // Logout Handler with Backend Call
-    const handleLogout = async () => {
-        Alert.alert(
-            'Disconnect',
-            'Are you sure you want to disconnect from your account?',
-            [
-                {
-                    text: 'Cancel',
-                    onPress: () => {},
-                    style: 'cancel',
-                },
-                {
-                    text: 'Disconnect',
-                    onPress: async () => {
-                        setIsLoggingOut(true);
-                        try {
-                            // Retrieve token and userId from AsyncStorage
-                            const userToken = await AsyncStorage.getItem('userToken');
-                            const userData = await AsyncStorage.getItem('userData');
-                            const parsedUserData = userData ? JSON.parse(userData) : null;
-
-                            if (!userToken) {
-                                throw new Error('No authentication token found');
-                            }
-
-                            // Backend API call to disconnect/logout
-                            const response = await fetch('https://zoologically-unindentured-sol.ngrok-free.dev/api/auth/logout', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${userToken}`,
-                                },
-                                body: JSON.stringify({
-                                    userId: parsedUserData?._id || parsedUserData?.id,
-                                }),
-                            });
-
-                            if (!response.ok) {
-                                throw new Error('Logout failed');
-                            }
-
-                            const data = await response.json();
-                            console.log('Logout successful:', data);
-
-                            // Clear user session/token from AsyncStorage
-                            await AsyncStorage.removeItem('userToken');
-                            await AsyncStorage.removeItem('userData');
-                            await AsyncStorage.removeItem('refreshToken');
-
-                            setIsLoggingOut(false);
-                            
-                            // Navigate to Login screen
-                            navigation.reset({
-                                index: 0,
-                                routes: [{ name: 'Login' }],
-                            });
-
-                            Alert.alert('Success', 'You have been disconnected');
-                        } catch (error) {
-                            setIsLoggingOut(false);
-                            console.error('Logout error:', error);
-                            Alert.alert('Error', error.message || 'Failed to disconnect. Please try again.');
-                        }
-                    },
-                    style: 'destructive',
-                },
-            ]
-        );
-    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -302,17 +231,15 @@ const HomeScreen = ({ navigation }) => {
 
                 {/* Disconnect Button */}
                 <TouchableOpacity
-                    style={[styles.disconnectButton, isLoggingOut && styles.disconnectButtonDisabled]}
-                    onPress={handleLogout}
-                    disabled={isLoggingOut}
+                    style={[styles.disconnectButton]}
                 >
                     <Ionicons
-                        name={isLoggingOut ? "hourglass-outline" : "log-out-outline"}
+                        name={"log-out-outline"}
                         size={24}
                         color="#FF3B30"
                     />
                     <Text style={styles.disconnectButtonText}>
-                        {isLoggingOut ? 'Disconnecting...' : 'Disconnect'}
+                        Disconnect
                     </Text>
                 </TouchableOpacity>
             </Animated.View>
