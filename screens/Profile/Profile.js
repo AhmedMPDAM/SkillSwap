@@ -161,16 +161,25 @@ const ProfileScreen = ({ navigation }) => {
         try {
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.8,
+                // IMPORTANT: Disable editing to avoid blob URIs
+                // allowsEditing: true,
+                // aspect: [1, 1],
+                quality: 1.0, // Use full quality since we're not editing
             });
 
             if (!result.canceled) {
-                setProfileImage(result.assets[0].uri);
-                setProfileImageFile(result.assets[0]);
+                const asset = result.assets[0];
+                console.log('📸 Image picked:', {
+                    uri: asset.uri,
+                    type: asset.type,
+                    fileName: asset.fileName,
+                });
+                
+                setProfileImage(asset.uri);
+                setProfileImageFile(asset);
             }
         } catch (error) {
+            console.error('Error picking image:', error);
             Alert.alert('Error', 'Failed to pick image');
         }
     };
@@ -178,16 +187,25 @@ const ProfileScreen = ({ navigation }) => {
     const takePhoto = async () => {
         try {
             const result = await ImagePicker.launchCameraAsync({
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.8,
+                // IMPORTANT: Disable editing to avoid blob URIs
+                // allowsEditing: true,
+                // aspect: [1, 1],
+                quality: 1.0, // Use full quality since we're not editing
             });
 
             if (!result.canceled) {
-                setProfileImage(result.assets[0].uri);
-                setProfileImageFile(result.assets[0]);
+                const asset = result.assets[0];
+                console.log('📷 Photo taken:', {
+                    uri: asset.uri,
+                    type: asset.type,
+                    fileName: asset.fileName,
+                });
+                
+                setProfileImage(asset.uri);
+                setProfileImageFile(asset);
             }
         } catch (error) {
+            console.error('Error taking photo:', error);
             Alert.alert('Error', 'Failed to take photo');
         }
     };
@@ -228,49 +246,113 @@ const ProfileScreen = ({ navigation }) => {
             formData.append('location', location.trim());
             formData.append('socialLinks', JSON.stringify(socialLinks));
 
-            if (profileImageFile) {
-                formData.append('profileImage', {
-                    uri: profileImageFile.uri,
-                    type: profileImageFile.type || 'image/jpeg',
-                    name: profileImageFile.fileName || `profile-${Date.now()}.jpg`,
+            // Handle image upload
+            if (profileImageFile && profileImageFile.uri) {
+                console.log('🖼️ Processing image file...');
+                console.log('Original URI:', profileImageFile.uri);
+
+                // Determine proper MIME type
+                let mimeType = 'image/jpeg'; // Default
+                if (profileImageFile.type) {
+                    if (profileImageFile.type === 'image') {
+                        // Expo returns 'image', convert to proper MIME type
+                        const fileName = profileImageFile.fileName || '';
+                        if (fileName.endsWith('.png')) {
+                            mimeType = 'image/png';
+                        } else if (fileName.endsWith('.gif')) {
+                            mimeType = 'image/gif';
+                        } else if (fileName.endsWith('.webp')) {
+                            mimeType = 'image/webp';
+                        }
+                    } else if (profileImageFile.type.startsWith('image/')) {
+                        mimeType = profileImageFile.type;
+                    }
+                }
+
+                const fileName = profileImageFile.fileName || `profile-${Date.now()}.jpg`;
+
+                console.log('✅ File info:', {
+                    mimeType,
+                    fileName,
+                    uriType: profileImageFile.uri.startsWith('blob:') ? 'blob' : 'file',
                 });
+
+                // For blob URIs, we need to fetch and convert to binary
+                if (profileImageFile.uri.startsWith('blob:')) {
+                    console.log('📥 Converting blob URI to file data...');
+                    try {
+                        // Fetch the blob
+                        const response = await fetch(profileImageFile.uri);
+                        const blob = await response.blob();
+                        console.log('✅ Blob fetched - Size:', blob.size, 'Type:', blob.type);
+
+                        // Append blob directly to FormData
+                        // FormData will handle the blob properly
+                        formData.append('profileImage', blob, fileName);
+                        console.log('✅ Blob appended to FormData');
+                    } catch (blobError) {
+                        console.error('❌ Error handling blob:', blobError);
+                        // Fallback: try appending the object directly
+                        console.log('⚠️ Falling back to object append');
+                        formData.append('profileImage', {
+                            uri: profileImageFile.uri,
+                            type: mimeType,
+                            name: fileName,
+                        });
+                    }
+                } else {
+                    // Regular file: URI from device
+                    console.log('📁 Using file URI');
+                    formData.append('profileImage', {
+                        uri: profileImageFile.uri,
+                        type: mimeType,
+                        name: fileName,
+                    });
+                }
+            } else {
+                console.log('⚠️ No new image file selected, keeping existing image');
             }
 
+            console.log(' Sending profile update request...');
             const response = await fetch(`${API_URL}/profile`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
-                    'ngrok-skip-browser-warning': 'true', // Required for ngrok
+                    'ngrok-skip-browser-warning': 'true',
                 },
                 body: formData,
             });
 
+            console.log('📨 Response received:', response.status);
+
             if (response.ok) {
                 const data = await response.json();
+                console.log('✅ Response data:', data);
+                
                 const updatedUser = data.user || data;
                 
-                // Update profile state
                 setProfile(updatedUser);
                 
-                // Update profile image URL if it was changed
                 if (updatedUser.profileImage) {
                     const imageUrl = getImageUrl(updatedUser.profileImage);
+                    console.log('🖼️ Updated image URL:', imageUrl);
                     setProfileImage(imageUrl);
+                } else {
+                    console.warn('⚠️ profileImage is still null in response');
                 }
                 
-                // Clear the file reference since it's been uploaded
                 setProfileImageFile(null);
-                
                 Alert.alert('Success', 'Profile updated successfully!');
             } else if (response.status === 401 || response.status === 403) {
                 Alert.alert('Session Expired', 'Please login again');
                 navigation.navigate('Login');
             } else {
                 const errorData = await response.json().catch(() => ({}));
+                console.error('❌ Update failed:', errorData);
                 Alert.alert('Error', errorData.message || 'Failed to update profile');
             }
         } catch (error) {
-            console.error('Profile save error:', error);
+            console.error('❌ Profile save error:', error);
             Alert.alert('Error', 'Network error. Please check your connection and try again.');
         } finally {
             setSaving(false);
