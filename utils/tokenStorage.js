@@ -65,5 +65,18 @@ export const tokenStorage = {
       return false;
     }
   },
+
+  // Clear all tokens (logout)
+  async clearTokens() {
+    try {
+      await AsyncStorage.multiRemove([
+        TOKEN_KEYS.ACCESS_TOKEN,
+        TOKEN_KEYS.REFRESH_TOKEN,
+      ]);
+    } catch (error) {
+      console.error('Error clearing tokens:', error);
+      throw error;
+    }
+  },
 };
 

@@ -103,17 +103,17 @@ const ProfileScreen = ({ navigation }) => {
             if (response.ok) {
                 const data = await response.json();
                 setProfile(data);
-                
+
                 // Populate form fields with existing user data
                 // Handle case where user might not have profile data yet
                 setFullName(data.fullName || '');
                 setBio(data.bio || '');
                 setLocation(data.location || '');
-                
+
                 // Construct full URL for profile image
                 const imageUrl = getImageUrl(data.profileImage);
                 setProfileImage(imageUrl);
-                
+
                 // Populate social links - handle both object and undefined cases
                 if (data.socialLinks && typeof data.socialLinks === 'object') {
                     setSocialLinks({
@@ -134,7 +134,7 @@ const ProfileScreen = ({ navigation }) => {
                         portfolio: '',
                     });
                 }
-                
+
                 // Populate certificates
                 setCertificates(Array.isArray(data.certificates) ? data.certificates : []);
             } else if (response.status === 401 || response.status === 403) {
@@ -174,7 +174,7 @@ const ProfileScreen = ({ navigation }) => {
                     type: asset.type,
                     fileName: asset.fileName,
                 });
-                
+
                 setProfileImage(asset.uri);
                 setProfileImageFile(asset);
             }
@@ -200,7 +200,7 @@ const ProfileScreen = ({ navigation }) => {
                     type: asset.type,
                     fileName: asset.fileName,
                 });
-                
+
                 setProfileImage(asset.uri);
                 setProfileImageFile(asset);
             }
@@ -328,11 +328,11 @@ const ProfileScreen = ({ navigation }) => {
             if (response.ok) {
                 const data = await response.json();
                 console.log('✅ Response data:', data);
-                
+
                 const updatedUser = data.user || data;
-                
+
                 setProfile(updatedUser);
-                
+
                 if (updatedUser.profileImage) {
                     const imageUrl = getImageUrl(updatedUser.profileImage);
                     console.log('🖼️ Updated image URL:', imageUrl);
@@ -340,7 +340,7 @@ const ProfileScreen = ({ navigation }) => {
                 } else {
                     console.warn('⚠️ profileImage is still null in response');
                 }
-                
+
                 setProfileImageFile(null);
                 Alert.alert('Success', 'Profile updated successfully!');
             } else if (response.status === 401 || response.status === 403) {
@@ -460,7 +460,7 @@ const ProfileScreen = ({ navigation }) => {
             'Delete Certificate',
             'Are you sure you want to delete this certificate?',
             [
-                { text: 'Cancel', onPress: () => {}, style: 'cancel' },
+                { text: 'Cancel', onPress: () => { }, style: 'cancel' },
                 {
                     text: 'Delete',
                     onPress: async () => {
@@ -527,6 +527,54 @@ const ProfileScreen = ({ navigation }) => {
         return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
     };
 
+    const handleLogout = async () => {
+        Alert.alert(
+            'Logout',
+            'Are you sure you want to logout?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Logout',
+                    onPress: async () => {
+                        try {
+                            const accessToken = await tokenStorage.getAccessToken();
+
+                            // Call backend logout endpoint
+                            if (accessToken) {
+                                await fetch(`${API_URL}/auth/logout`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Authorization': `Bearer ${accessToken}`,
+                                        'Content-Type': 'application/json',
+                                        'ngrok-skip-browser-warning': 'true',
+                                    },
+                                });
+                            }
+
+                            // Clear tokens from local storage
+                            await tokenStorage.clearTokens();
+
+                            // Navigate to login screen
+                            navigation.reset({
+                                index: 0,
+                                routes: [{ name: 'Login' }],
+                            });
+                        } catch (error) {
+                            console.error('Logout error:', error);
+                            // Even if the API call fails, clear tokens and navigate to login
+                            await tokenStorage.clearTokens();
+                            navigation.reset({
+                                index: 0,
+                                routes: [{ name: 'Login' }],
+                            });
+                        }
+                    },
+                    style: 'destructive',
+                },
+            ]
+        );
+    };
+
     if (loading) {
         return (
             <View style={styles.centerContainer}>
@@ -542,6 +590,19 @@ const ProfileScreen = ({ navigation }) => {
         >
             <View style={styles.container}>
                 <StatusBar barStyle="dark-content" />
+
+                {/* Header with Back Arrow */}
+                <View style={styles.profileHeaderBar}>
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Ionicons name="arrow-back" size={28} color="#007AFF" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Profile</Text>
+                    <View style={styles.headerSpacer} />
+                </View>
+
                 <ScrollView
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.scrollContent}
@@ -691,7 +752,7 @@ const ProfileScreen = ({ navigation }) => {
                                         </View>
                                     </View>
                                     {cert.documentUrl && (
-                                        <TouchableOpacity 
+                                        <TouchableOpacity
                                             style={styles.documentLink}
                                             onPress={() => {
                                                 const docUrl = getImageUrl(cert.documentUrl);
@@ -728,6 +789,15 @@ const ProfileScreen = ({ navigation }) => {
                                 <Text style={styles.saveButtonText}>Save Profile</Text>
                             </>
                         )}
+                    </TouchableOpacity>
+
+                    {/* Logout Button */}
+                    <TouchableOpacity
+                        style={styles.logoutButton}
+                        onPress={handleLogout}
+                    >
+                        <Ionicons name="log-out-outline" size={20} color="#FF3B30" />
+                        <Text style={styles.logoutButtonText}>Logout</Text>
                     </TouchableOpacity>
 
                     <View style={styles.spacing} />
@@ -1115,6 +1185,45 @@ const styles = StyleSheet.create({
     },
     modalButtonText: {
         color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    profileHeaderBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 15,
+        paddingVertical: 12,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+    },
+    backButton: {
+        padding: 4,
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#000',
+    },
+    headerSpacer: {
+        width: 36, // Same width as back button to center title
+    },
+    logoutButton: {
+        flexDirection: 'row',
+        backgroundColor: '#fff',
+        marginHorizontal: 15,
+        marginTop: 15,
+        paddingVertical: 14,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 10,
+        borderWidth: 1,
+        borderColor: '#FF3B30',
+    },
+    logoutButtonText: {
+        color: '#FF3B30',
         fontSize: 16,
         fontWeight: '600',
     },

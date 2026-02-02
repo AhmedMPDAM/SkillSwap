@@ -85,6 +85,41 @@ const HomeScreen = ({ navigation }) => {
         navigation.navigate(screen);
     };
 
+    const handleLogout = async () => {
+        Alert.alert(
+            'Logout',
+            'Are you sure you want to logout?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Logout',
+                    onPress: async () => {
+                        try {
+                            // Clear tokens from AsyncStorage
+                            await AsyncStorage.multiRemove([
+                                '@skillswap_access_token',
+                                '@skillswap_refresh_token',
+                            ]);
+
+                            // Close menu
+                            toggleMenu();
+
+                            // Navigate to login screen and reset navigation stack
+                            navigation.reset({
+                                index: 0,
+                                routes: [{ name: 'Login' }],
+                            });
+                        } catch (error) {
+                            console.error('Logout error:', error);
+                            Alert.alert('Error', 'Failed to logout. Please try again.');
+                        }
+                    },
+                    style: 'destructive',
+                },
+            ]
+        );
+    };
+
     const handleNextFeature = () => {
         if (currentFeatureIndex < features.length - 1) {
             setCurrentFeatureIndex(prev => prev + 1);
@@ -232,6 +267,7 @@ const HomeScreen = ({ navigation }) => {
                 {/* Disconnect Button */}
                 <TouchableOpacity
                     style={[styles.disconnectButton]}
+                    onPress={handleLogout}
                 >
                     <Ionicons
                         name={"log-out-outline"}
