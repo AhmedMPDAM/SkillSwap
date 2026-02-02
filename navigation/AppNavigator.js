@@ -4,6 +4,9 @@ import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/Home/home';
 import MarketplaceScreen from '../screens/Marketplace/Marketplace';
+import MarketplaceFeed from '../screens/Marketplace/MarketplaceFeed';
+import CreateExchangeRequest from '../screens/Marketplace/CreateExchangeRequest';
+import ExchangeRequestDetail from '../screens/Marketplace/ExchangeRequestDetail';
 import TopRatedScreen from '../screens/TopRated/TopRated';
 import ProfileScreen from '../screens/Profile/Profile';
 
@@ -49,6 +52,27 @@ const AppNavigator = () => {
             <Stack.Screen
                 name="Marketplace"
                 component={MarketplaceScreen}
+                options={{
+                    animationEnabled: true,
+                }}
+            />
+            <Stack.Screen
+                name="MarketplaceFeed"
+                component={MarketplaceFeed}
+                options={{
+                    animationEnabled: true,
+                }}
+            />
+            <Stack.Screen
+                name="CreateExchangeRequest"
+                component={CreateExchangeRequest}
+                options={{
+                    animationEnabled: true,
+                }}
+            />
+            <Stack.Screen
+                name="ExchangeRequestDetail"
+                component={ExchangeRequestDetail}
                 options={{
                     animationEnabled: true,
                 }}
