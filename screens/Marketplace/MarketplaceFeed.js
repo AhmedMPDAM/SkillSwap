@@ -48,7 +48,7 @@ const MarketplaceFeed = ({ navigation }) => {
             }
 
             let url = `${API_BASE_URL}/api/marketplace/requests/feed?page=${pageNum}&limit=10`;
-            
+
             if (searchQuery || Object.values(filters).some(f => f)) {
                 url = `${API_BASE_URL}/api/marketplace/requests/search?page=${pageNum}&limit=10`;
                 if (searchQuery) url += `&q=${encodeURIComponent(searchQuery)}`;
@@ -170,6 +170,12 @@ const MarketplaceFeed = ({ navigation }) => {
                 <View style={[styles.levelTag, styles[`level${item.level}`]]}>
                     <Text style={styles.levelTagText}>{item.level}</Text>
                 </View>
+                {item.status === 'in_progress' && (
+                    <View style={styles.statusBadge}>
+                        <Ionicons name="hourglass-outline" size={12} color="#FF8C00" />
+                        <Text style={styles.statusBadgeText}>In Progress</Text>
+                    </View>
+                )}
             </View>
 
             <View style={styles.cardFooter}>
@@ -537,6 +543,20 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '600',
         color: '#000000',
+    },
+    statusBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFF4E6',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 12,
+        gap: 4,
+    },
+    statusBadgeText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#FF8C00',
     },
     cardFooter: {
         flexDirection: 'row',

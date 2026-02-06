@@ -169,11 +169,6 @@ const ProfileScreen = ({ navigation }) => {
 
             if (!result.canceled) {
                 const asset = result.assets[0];
-                console.log('📸 Image picked:', {
-                    uri: asset.uri,
-                    type: asset.type,
-                    fileName: asset.fileName,
-                });
 
                 setProfileImage(asset.uri);
                 setProfileImageFile(asset);
@@ -195,11 +190,7 @@ const ProfileScreen = ({ navigation }) => {
 
             if (!result.canceled) {
                 const asset = result.assets[0];
-                console.log('📷 Photo taken:', {
-                    uri: asset.uri,
-                    type: asset.type,
-                    fileName: asset.fileName,
-                });
+
 
                 setProfileImage(asset.uri);
                 setProfileImageFile(asset);
@@ -248,9 +239,6 @@ const ProfileScreen = ({ navigation }) => {
 
             // Handle image upload
             if (profileImageFile && profileImageFile.uri) {
-                console.log('🖼️ Processing image file...');
-                console.log('Original URI:', profileImageFile.uri);
-
                 // Determine proper MIME type
                 let mimeType = 'image/jpeg'; // Default
                 if (profileImageFile.type) {
@@ -271,29 +259,13 @@ const ProfileScreen = ({ navigation }) => {
 
                 const fileName = profileImageFile.fileName || `profile-${Date.now()}.jpg`;
 
-                console.log('✅ File info:', {
-                    mimeType,
-                    fileName,
-                    uriType: profileImageFile.uri.startsWith('blob:') ? 'blob' : 'file',
-                });
-
                 // For blob URIs, we need to fetch and convert to binary
                 if (profileImageFile.uri.startsWith('blob:')) {
-                    console.log('📥 Converting blob URI to file data...');
                     try {
-                        // Fetch the blob
                         const response = await fetch(profileImageFile.uri);
                         const blob = await response.blob();
-                        console.log('✅ Blob fetched - Size:', blob.size, 'Type:', blob.type);
-
-                        // Append blob directly to FormData
-                        // FormData will handle the blob properly
                         formData.append('profileImage', blob, fileName);
-                        console.log('✅ Blob appended to FormData');
                     } catch (blobError) {
-                        console.error('❌ Error handling blob:', blobError);
-                        // Fallback: try appending the object directly
-                        console.log('⚠️ Falling back to object append');
                         formData.append('profileImage', {
                             uri: profileImageFile.uri,
                             type: mimeType,
@@ -302,18 +274,14 @@ const ProfileScreen = ({ navigation }) => {
                     }
                 } else {
                     // Regular file: URI from device
-                    console.log('📁 Using file URI');
                     formData.append('profileImage', {
                         uri: profileImageFile.uri,
                         type: mimeType,
                         name: fileName,
                     });
                 }
-            } else {
-                console.log('⚠️ No new image file selected, keeping existing image');
             }
 
-            console.log(' Sending profile update request...');
             const response = await fetch(`${API_URL}/profile`, {
                 method: 'PUT',
                 headers: {
@@ -323,22 +291,15 @@ const ProfileScreen = ({ navigation }) => {
                 body: formData,
             });
 
-            console.log('📨 Response received:', response.status);
-
             if (response.ok) {
                 const data = await response.json();
-                console.log('✅ Response data:', data);
-
                 const updatedUser = data.user || data;
 
                 setProfile(updatedUser);
 
                 if (updatedUser.profileImage) {
                     const imageUrl = getImageUrl(updatedUser.profileImage);
-                    console.log('🖼️ Updated image URL:', imageUrl);
                     setProfileImage(imageUrl);
-                } else {
-                    console.warn('⚠️ profileImage is still null in response');
                 }
 
                 setProfileImageFile(null);
@@ -573,6 +534,18 @@ const ProfileScreen = ({ navigation }) => {
                 },
             ]
         );
+    };
+
+    const getSocialIcon = (platform) => {
+        const iconMap = {
+            facebook: 'logo-facebook',
+            instagram: 'logo-instagram',
+            twitter: 'logo-twitter',
+            linkedin: 'logo-linkedin',
+            github: 'logo-github',
+            portfolio: 'globe',
+        };
+        return iconMap[platform] || 'link';
     };
 
     if (loading) {
@@ -900,7 +873,7 @@ const ProfileScreen = ({ navigation }) => {
             </View>
         </KeyboardAvoidingView>
     );
-};
+}
 
 const getSocialIcon = (platform) => {
     const iconMap = {

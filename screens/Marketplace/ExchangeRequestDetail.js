@@ -25,8 +25,7 @@ const ExchangeRequestDetail = ({ route, navigation }) => {
     const [submittingProposal, setSubmittingProposal] = useState(false);
     const [proposalData, setProposalData] = useState({
         coverLetter: '',
-        proposedDuration: '',
-        proposedCredits: '',
+        acceptanceType: '', // 'accept_deal' or 'admin_quantification'
     });
 
     useEffect(() => {
@@ -86,12 +85,8 @@ const ExchangeRequestDetail = ({ route, navigation }) => {
             Alert.alert('Error', 'Please write a cover letter');
             return;
         }
-        if (!proposalData.proposedDuration || parseFloat(proposalData.proposedDuration) <= 0) {
-            Alert.alert('Error', 'Please enter a valid proposed duration');
-            return;
-        }
-        if (!proposalData.proposedCredits || parseFloat(proposalData.proposedCredits) <= 0) {
-            Alert.alert('Error', 'Please enter a valid proposed credits amount');
+        if (!proposalData.acceptanceType) {
+            Alert.alert('Error', 'Please select an acceptance option');
             return;
         }
 
@@ -108,8 +103,7 @@ const ExchangeRequestDetail = ({ route, navigation }) => {
                 body: JSON.stringify({
                     requestId: requestId,
                     coverLetter: proposalData.coverLetter,
-                    proposedDuration: parseFloat(proposalData.proposedDuration),
-                    proposedCredits: parseFloat(proposalData.proposedCredits),
+                    acceptanceType: proposalData.acceptanceType,
                 }),
             });
 
@@ -123,12 +117,17 @@ const ExchangeRequestDetail = ({ route, navigation }) => {
             }
 
             if (response.ok) {
-                Alert.alert('Success', 'Your proposal has been submitted!', [
-                    { text: 'OK', onPress: () => {
-                        setProposalModalVisible(false);
-                        setProposalData({ coverLetter: '', proposedDuration: '', proposedCredits: '' });
-                        loadRequest();
-                    }}
+                const successMessage = proposalData.acceptanceType === 'admin_quantification'
+                    ? 'Request being processed. Admin will verify and quantify the deal.'
+                    : 'Your proposal has been submitted!';
+                Alert.alert('Success', successMessage, [
+                    {
+                        text: 'OK', onPress: () => {
+                            setProposalModalVisible(false);
+                            setProposalData({ coverLetter: '', acceptanceType: '' });
+                            loadRequest();
+                        }
+                    }
                 ]);
             } else {
                 Alert.alert('Error', data.message || 'Failed to submit proposal');
@@ -242,7 +241,9 @@ const ExchangeRequestDetail = ({ route, navigation }) => {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Status</Text>
                     <View style={[styles.statusBadge, styles[`status${request.status}`]]}>
-                        <Text style={styles.statusText}>{request.status}</Text>
+                        <Text style={styles.statusText}>
+                            {request.status.replace(/_/g, ' ')}
+                        </Text>
                     </View>
                 </View>
             </ScrollView>
@@ -289,27 +290,60 @@ const ExchangeRequestDetail = ({ route, navigation }) => {
                             </View>
 
                             <View style={styles.modalInputGroup}>
-                                <Text style={styles.modalLabel}>Proposed Duration (hours) *</Text>
-                                <TextInput
-                                    style={styles.modalInput}
-                                    placeholder="e.g., 8"
-                                    value={proposalData.proposedDuration}
-                                    onChangeText={(text) => setProposalData({ ...proposalData, proposedDuration: text })}
-                                    keyboardType="numeric"
-                                />
-                            </View>
+                                <Text style={styles.modalLabel}>Response Option *</Text>
 
-                            <View style={styles.modalInputGroup}>
-                                <Text style={styles.modalLabel}>Proposed Credits *</Text>
-                                <TextInput
-                                    style={styles.modalInput}
-                                    placeholder="e.g., 16"
-                                    value={proposalData.proposedCredits}
-                                    onChangeText={(text) => setProposalData({ ...proposalData, proposedCredits: text })}
-                                    keyboardType="numeric"
-                                />
+                                <TouchableOpacity
+                                    style={[
+                                        styles.checkboxOption,
+                                        proposalData.acceptanceType === 'accept_deal' && styles.checkboxOptionActive
+                                    ]}
+                                    onPress={() => setProposalData({ ...proposalData, acceptanceType: 'accept_deal' })}
+                                >
+                                    <View style={styles.checkboxOptionLeft}>
+                                        <View style={[
+                                            styles.checkbox,
+                                            proposalData.acceptanceType === 'accept_deal' && styles.checkboxActive
+                                        ]}>
+                                            {proposalData.acceptanceType === 'accept_deal' && (
+                                                <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+                                            )}
+                                        </View>
+                                        <View style={styles.checkboxTextContainer}>
+                                            <Text style={styles.checkboxTitle}>Accept Deal</Text>
+                                            <Text style={styles.checkboxDescription}>
+                                                Submit and immediately accept the offer
+                                            </Text>
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[
+                                        styles.checkboxOption,
+                                        proposalData.acceptanceType === 'admin_quantification' && styles.checkboxOptionActive
+                                    ]}
+                                    onPress={() => setProposalData({ ...proposalData, acceptanceType: 'admin_quantification' })}
+                                >
+                                    <View style={styles.checkboxOptionLeft}>
+                                        <View style={[
+                                            styles.checkbox,
+                                            proposalData.acceptanceType === 'admin_quantification' && styles.checkboxActive
+                                        ]}>
+                                            {proposalData.acceptanceType === 'admin_quantification' && (
+                                                <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+                                            )}
+                                        </View>
+                                        <View style={styles.checkboxTextContainer}>
+                                            <Text style={styles.checkboxTitle}>Admin Quantification</Text>
+                                            <Text style={styles.checkboxDescription}>
+                                                Costs 4 credits (deducted from offer value)
+                                            </Text>
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+
                                 <Text style={styles.modalHelperText}>
-                                    Original estimate: {request.estimatedCredits} credits
+                                    Estimated Credits: {request.estimatedCredits} credits
                                 </Text>
                             </View>
                         </ScrollView>
@@ -604,6 +638,50 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#8E8E93',
         marginTop: 8,
+    },
+    checkboxOption: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 2,
+        borderColor: '#E5E5EA',
+    },
+    checkboxOptionActive: {
+        borderColor: '#007AFF',
+        backgroundColor: '#F0F8FF',
+    },
+    checkboxOptionLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    checkbox: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: '#E5E5EA',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+    },
+    checkboxActive: {
+        backgroundColor: '#007AFF',
+        borderColor: '#007AFF',
+    },
+    checkboxTextContainer: {
+        flex: 1,
+    },
+    checkboxTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#000000',
+        marginBottom: 4,
+    },
+    checkboxDescription: {
+        fontSize: 13,
+        color: '#8E8E93',
     },
     modalFooter: {
         flexDirection: 'row',

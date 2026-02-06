@@ -301,7 +301,11 @@ const HomeScreen = ({ navigation }) => {
                 </View>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <ScrollView
+                style={{ flex: 1 }}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+            >
 
                 {/* Credit Balance Card */}
                 <View style={styles.section}>
@@ -493,6 +497,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#F2F2F7',
+        height: '100vh', // Ensures proper height on web
     },
     header: {
         flexDirection: 'row',

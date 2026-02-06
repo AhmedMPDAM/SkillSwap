@@ -21,17 +21,17 @@ import Step2Skills from '../RegisterSteps/Step2Skills';
 const CreateExchangeRequest = ({ navigation }) => {
     const [currentStep, setCurrentStep] = useState(1);
     const [loading, setLoading] = useState(false);
-    
+
     // Step 1: Basic Info
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [skillSearched, setSkillSearched] = useState('');
     const [category, setCategory] = useState('');
     const [level, setLevel] = useState('beginner');
-    
+
     // Step 2: What you offer (from skills list)
     const [selectedOfferedSkills, setSelectedOfferedSkills] = useState([]);
-    
+
     // Step 3: Time & Credits
     const [estimatedDuration, setEstimatedDuration] = useState('');
     const [desiredDeadline, setDesiredDeadline] = useState('');
@@ -39,11 +39,50 @@ const CreateExchangeRequest = ({ navigation }) => {
     const [location, setLocation] = useState('');
     const [estimatedCredits, setEstimatedCredits] = useState(0);
 
-    const categories = [
-        'Coding', 'Graphic Design', 'Content Creation', 'Business & Marketing',
-        'Coaching & Mentoring', 'Education', 'Data & Analytics', 'Creative Arts',
-        'Languages', 'Finance & Accounting'
-    ];
+    const skillsTaxonomy = {
+        'Coding': {
+            icon: 'code-slash',
+            skills: ['Web Development', 'Mobile Development', 'Backend', 'Frontend', 'Full-stack', 'DevOps', 'Cloud Computing'],
+        },
+        'Graphic Design': {
+            icon: 'color-palette',
+            skills: ['UI/UX Design', 'Graphic Design', 'Brand Design', 'Product Design', 'Motion Graphics', 'Illustration'],
+        },
+        'Content Creation': {
+            icon: 'camera',
+            skills: ['Writing', 'Video Editing', 'Photography', 'Podcasting', 'Blogging', 'Social Media Content'],
+        },
+        'Business & Marketing': {
+            icon: 'trending-up',
+            skills: ['SEO', 'Social Media Marketing', 'Growth Hacking', 'Email Marketing', 'Content Marketing', 'Analytics'],
+        },
+        'Coaching & Mentoring': {
+            icon: 'people',
+            skills: ['Career Coaching', 'Business Coaching', 'Life Coaching', 'Leadership', 'Personal Development'],
+        },
+        'Education': {
+            icon: 'school',
+            skills: ['Teaching', 'Tutoring', 'Curriculum Development', 'Online Courses', 'Academic Research', 'Mentoring'],
+        },
+        'Data & Analytics': {
+            icon: 'bar-chart',
+            skills: ['Data Science', 'Machine Learning', 'Data Analysis', 'Business Intelligence', 'Statistics', 'AI'],
+        },
+        'Creative Arts': {
+            icon: 'musical-notes',
+            skills: ['Music Production', 'Sound Design', '3D Modeling', 'Animation', 'Game Design', 'Digital Art'],
+        },
+        'Languages': {
+            icon: 'globe',
+            skills: ['Translation', 'Interpretation', 'Language Teaching', 'Copywriting', 'Technical Writing'],
+        },
+        'Finance & Accounting': {
+            icon: 'cash',
+            skills: ['Financial Planning', 'Accounting', 'Investment', 'Tax Consulting', 'Bookkeeping', 'Cryptocurrency'],
+        },
+    };
+
+    const categories = Object.keys(skillsTaxonomy);
 
     const levels = [
         { value: 'beginner', label: 'Beginner' },
@@ -282,16 +321,6 @@ const CreateExchangeRequest = ({ navigation }) => {
             </View>
 
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Skill You're Looking For *</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="e.g., Graphic Design, Web Development"
-                    value={skillSearched}
-                    onChangeText={setSkillSearched}
-                />
-            </View>
-
-            <View style={styles.inputGroup}>
                 <Text style={styles.label}>Category *</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
                     {categories.map((cat) => (
@@ -301,7 +330,11 @@ const CreateExchangeRequest = ({ navigation }) => {
                                 styles.categoryChip,
                                 category === cat && styles.categoryChipActive,
                             ]}
-                            onPress={() => setCategory(cat)}
+                            onPress={() => {
+                                setCategory(cat);
+                                // Reset skill selection when category changes
+                                setSkillSearched('');
+                            }}
                         >
                             <Text
                                 style={[
@@ -315,6 +348,36 @@ const CreateExchangeRequest = ({ navigation }) => {
                     ))}
                 </ScrollView>
             </View>
+
+            {category && (
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Skill You're Looking For *</Text>
+                    <View style={styles.skillsSelectionContainer}>
+                        {skillsTaxonomy[category].skills.map((skill) => (
+                            <TouchableOpacity
+                                key={skill}
+                                style={[
+                                    styles.skillSelectionChip,
+                                    skillSearched === skill && styles.skillSelectionChipActive,
+                                ]}
+                                onPress={() => setSkillSearched(skill)}
+                            >
+                                <Text
+                                    style={[
+                                        styles.skillSelectionChipText,
+                                        skillSearched === skill && styles.skillSelectionChipTextActive,
+                                    ]}
+                                >
+                                    {skill}
+                                </Text>
+                                {skillSearched === skill && (
+                                    <Ionicons name="checkmark-circle" size={16} color="#007AFF" />
+                                )}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+            )}
 
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Required Level *</Text>
@@ -427,7 +490,7 @@ const CreateExchangeRequest = ({ navigation }) => {
                 </View>
                 <View style={styles.creditsPreviewContent}>
                     <Text style={styles.creditsPreviewText}>
-                        {estimatedDuration || 0} hours × {complexities.find(c => c.value === complexity)?.multiplier || 1}x = 
+                        {estimatedDuration || 0} hours × {complexities.find(c => c.value === complexity)?.multiplier || 1}x =
                     </Text>
                     <Text style={styles.creditsPreviewAmount}>
                         {estimatedCredits.toFixed(1)} credits
@@ -609,6 +672,36 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     categoryChipTextActive: {
+        color: '#007AFF',
+        fontWeight: '600',
+    },
+    skillsSelectionContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginTop: 8,
+    },
+    skillSelectionChip: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderWidth: 1,
+        borderColor: '#E5E5EA',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    skillSelectionChipActive: {
+        backgroundColor: '#E3F2FD',
+        borderColor: '#007AFF',
+    },
+    skillSelectionChipText: {
+        fontSize: 15,
+        color: '#000000',
+        fontWeight: '500',
+    },
+    skillSelectionChipTextActive: {
         color: '#007AFF',
         fontWeight: '600',
     },
