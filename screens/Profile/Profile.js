@@ -67,16 +67,27 @@ const ProfileScreen = ({ navigation }) => {
     // Helper function to construct full image URL
     const getImageUrl = (imagePath) => {
         if (!imagePath) return null;
+
         // If it's already a full URL, return as is
         if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
             return imagePath;
         }
-        // If it's a relative path, construct full URL
-        if (imagePath.startsWith('/')) {
-            return `${BASE_URL}${imagePath}`;
+
+        // Clean up backslashes just in case (windows paths)
+        let cleanPath = imagePath.replace(/\\/g, '/');
+
+        // Remove leading slash if present to standardize
+        if (cleanPath.startsWith('/')) {
+            cleanPath = cleanPath.substring(1);
         }
-        // Otherwise, assume it's relative to uploads
-        return `${BASE_URL}/uploads/${imagePath}`;
+
+        // If path already starts with 'uploads/', don't add it again
+        if (cleanPath.startsWith('uploads/')) {
+            return `${BASE_URL}/${cleanPath}`;
+        }
+
+        // Otherwise, assume it needs the uploads prefix
+        return `${BASE_URL}/uploads/${cleanPath}`;
     };
 
     const fetchProfile = async () => {
