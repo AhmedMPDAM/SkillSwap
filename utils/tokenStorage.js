@@ -3,16 +3,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const TOKEN_KEYS = {
   ACCESS_TOKEN: '@skillswap_access_token',
   REFRESH_TOKEN: '@skillswap_refresh_token',
+  USER_ROLE: '@skillswap_user_role',
 };
 
 export const tokenStorage = {
   // Store tokens
-  async setTokens(accessToken, refreshToken) {
+  async setTokens(accessToken, refreshToken, role = null) {
     try {
-      await AsyncStorage.multiSet([
+      const MultiSetArgs = [
         [TOKEN_KEYS.ACCESS_TOKEN, accessToken],
         [TOKEN_KEYS.REFRESH_TOKEN, refreshToken],
-      ]);
+      ];
+      if (role) {
+        MultiSetArgs.push([TOKEN_KEYS.USER_ROLE, role]);
+      }
+      await AsyncStorage.multiSet(MultiSetArgs);
     } catch (error) {
       console.error('Error storing tokens:', error);
       throw error;
@@ -35,6 +40,16 @@ export const tokenStorage = {
       return await AsyncStorage.getItem(TOKEN_KEYS.REFRESH_TOKEN);
     } catch (error) {
       console.error('Error getting refresh token:', error);
+      return null;
+    }
+  },
+
+  // Get user role
+  async getUserRole() {
+    try {
+      return await AsyncStorage.getItem(TOKEN_KEYS.USER_ROLE);
+    } catch (error) {
+      console.error('Error getting user role:', error);
       return null;
     }
   },
@@ -72,6 +87,7 @@ export const tokenStorage = {
       await AsyncStorage.multiRemove([
         TOKEN_KEYS.ACCESS_TOKEN,
         TOKEN_KEYS.REFRESH_TOKEN,
+        TOKEN_KEYS.USER_ROLE,
       ]);
     } catch (error) {
       console.error('Error clearing tokens:', error);

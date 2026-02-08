@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -8,51 +8,26 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { API_BASE_URL } from '../../config/apiConfig';
+
 const Step2Skills = ({ selectedSkills, setSelectedSkills }) => {
     const [expandedCategory, setExpandedCategory] = useState(null);
+    const [categories, setCategories] = useState([]);
 
-    const skillsTaxonomy = {
-        'Coding': {
-            icon: 'code-slash',
-            skills: ['Web Development', 'Mobile Development', 'Backend', 'Frontend', 'Full-stack', 'DevOps', 'Cloud Computing'],
-        },
-        'Graphic Design': {
-            icon: 'color-palette',
-            skills: ['UI/UX Design', 'Graphic Design', 'Brand Design', 'Product Design', 'Motion Graphics', 'Illustration'],
-        },
-        'Content Creation': {
-            icon: 'camera',
-            skills: ['Writing', 'Video Editing', 'Photography', 'Podcasting', 'Blogging', 'Social Media Content'],
-        },
-        'Business & Marketing': {
-            icon: 'trending-up',
-            skills: ['SEO', 'Social Media Marketing', 'Growth Hacking', 'Email Marketing', 'Content Marketing', 'Analytics'],
-        },
-        'Coaching & Mentoring': {
-            icon: 'people',
-            skills: ['Career Coaching', 'Business Coaching', 'Life Coaching', 'Leadership', 'Personal Development'],
-        },
-        'Education': {
-            icon: 'school',
-            skills: ['Teaching', 'Tutoring', 'Curriculum Development', 'Online Courses', 'Academic Research', 'Mentoring'],
-        },
-        'Data & Analytics': {
-            icon: 'bar-chart',
-            skills: ['Data Science', 'Machine Learning', 'Data Analysis', 'Business Intelligence', 'Statistics', 'AI'],
-        },
-        'Creative Arts': {
-            icon: 'musical-notes',
-            skills: ['Music Production', 'Sound Design', '3D Modeling', 'Animation', 'Game Design', 'Digital Art'],
-        },
-        'Languages': {
-            icon: 'globe',
-            skills: ['Translation', 'Interpretation', 'Language Teaching', 'Copywriting', 'Technical Writing'],
-        },
-        'Finance & Accounting': {
-            icon: 'cash',
-            skills: ['Financial Planning', 'Accounting', 'Investment', 'Tax Consulting', 'Bookkeeping', 'Cryptocurrency'],
-        },
-    };
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/categories`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setCategories(data);
+                }
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+            }
+        };
+        fetchCategories();
+    }, []);
 
     const toggleSkill = (skill) => {
         if (selectedSkills.includes(skill)) {
@@ -92,28 +67,28 @@ const Step2Skills = ({ selectedSkills, setSelectedSkills }) => {
                 style={styles.categoriesContainer}
                 showsVerticalScrollIndicator={false}
             >
-                {Object.entries(skillsTaxonomy).map(([category, data]) => (
-                    <View key={category} style={styles.categoryContainer}>
+                {categories.map((cat) => (
+                    <View key={cat.name} style={styles.categoryContainer}>
                         <TouchableOpacity
                             style={styles.categoryHeader}
-                            onPress={() => toggleCategory(category)}
+                            onPress={() => toggleCategory(cat.name)}
                         >
                             <View style={styles.categoryHeaderLeft}>
                                 <View style={styles.iconCircle}>
-                                    <Ionicons name={data.icon} size={20} color="#007AFF" />
+                                    <Ionicons name={cat.icon} size={20} color="#007AFF" />
                                 </View>
-                                <Text style={styles.categoryTitle}>{category}</Text>
+                                <Text style={styles.categoryTitle}>{cat.name}</Text>
                             </View>
                             <Ionicons
-                                name={expandedCategory === category ? "chevron-up" : "chevron-down"}
+                                name={expandedCategory === cat.name ? "chevron-up" : "chevron-down"}
                                 size={20}
                                 color="#8E8E93"
                             />
                         </TouchableOpacity>
 
-                        {expandedCategory === category && (
+                        {expandedCategory === cat.name && (
                             <View style={styles.skillsContainer}>
-                                {data.skills.map((skill) => (
+                                {cat.subcategories.map((skill) => (
                                     <TouchableOpacity
                                         key={skill}
                                         style={[

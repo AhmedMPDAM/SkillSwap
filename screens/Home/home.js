@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
     Text,
@@ -17,6 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { tokenStorage } from '../../utils/tokenStorage';
 
 const { width } = Dimensions.get('window');
 
@@ -26,8 +27,17 @@ const HomeScreen = ({ navigation }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [userCredits, setUserCredits] = useState(150);
     const [notifications, setNotifications] = useState(3);
+    const [userRole, setUserRole] = useState(null);
     const slideAnim = useRef(new Animated.Value(-width * 0.75)).current;
     const scrollViewRef = useRef(null);
+
+    useEffect(() => {
+        const fetchRole = async () => {
+            const role = await tokenStorage.getUserRole();
+            setUserRole(role);
+        };
+        fetchRole();
+    }, []);
 
     // Dummy Data
     const features = [
@@ -197,6 +207,16 @@ const HomeScreen = ({ navigation }) => {
                     style={styles.menuContent}
                     showsVerticalScrollIndicator={false}
                 >
+                    {userRole === 'admin' && (
+                        <TouchableOpacity
+                            style={styles.menuItemFull}
+                            onPress={() => handleMenuNavigation('AdminDashboard')}
+                        >
+                            <Ionicons name="shield-checkmark-outline" size={24} color="#FF3B30" />
+                            <Text style={styles.menuItemText}>Admin Dashboard</Text>
+                        </TouchableOpacity>
+                    )}
+
                     <TouchableOpacity
                         style={styles.menuItemFull}
                         onPress={() => handleMenuNavigation('Profile')}

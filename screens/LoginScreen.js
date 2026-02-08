@@ -42,7 +42,7 @@ const LoginScreen = ({ navigation }) => {
             if (response.ok) {
                 // Store tokens in AsyncStorage
                 if (data.accessToken && data.refreshToken) {
-                    await tokenStorage.setTokens(data.accessToken, data.refreshToken);
+                    await tokenStorage.setTokens(data.accessToken, data.refreshToken, data.user?.role);
                 }
                 Alert.alert('Success', 'Login successful!');
                 navigation.navigate('Home');

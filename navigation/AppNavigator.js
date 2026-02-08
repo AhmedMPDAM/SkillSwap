@@ -9,6 +9,8 @@ import CreateExchangeRequest from '../screens/Marketplace/CreateExchangeRequest'
 import ExchangeRequestDetail from '../screens/Marketplace/ExchangeRequestDetail';
 import TopRatedScreen from '../screens/TopRated/TopRated';
 import ProfileScreen from '../screens/Profile/Profile';
+import AdminDashboard from '../screens/Admin/AdminDashboard';
+import CategoryManagement from '../screens/Admin/CategoryManagement';
 
 const Stack = createStackNavigator();
 
@@ -87,6 +89,20 @@ const AppNavigator = () => {
             <Stack.Screen
                 name="Profile"
                 component={ProfileScreen}
+                options={{
+                    animationEnabled: true,
+                }}
+            />
+            <Stack.Screen
+                name="AdminDashboard"
+                component={AdminDashboard}
+                options={{
+                    animationEnabled: true,
+                }}
+            />
+            <Stack.Screen
+                name="CategoryManagement"
+                component={CategoryManagement}
                 options={{
                     animationEnabled: true,
                 }}

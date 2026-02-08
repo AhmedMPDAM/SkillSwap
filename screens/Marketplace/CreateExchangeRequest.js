@@ -39,50 +39,25 @@ const CreateExchangeRequest = ({ navigation }) => {
     const [location, setLocation] = useState('');
     const [estimatedCredits, setEstimatedCredits] = useState(0);
 
-    const skillsTaxonomy = {
-        'Coding': {
-            icon: 'code-slash',
-            skills: ['Web Development', 'Mobile Development', 'Backend', 'Frontend', 'Full-stack', 'DevOps', 'Cloud Computing'],
-        },
-        'Graphic Design': {
-            icon: 'color-palette',
-            skills: ['UI/UX Design', 'Graphic Design', 'Brand Design', 'Product Design', 'Motion Graphics', 'Illustration'],
-        },
-        'Content Creation': {
-            icon: 'camera',
-            skills: ['Writing', 'Video Editing', 'Photography', 'Podcasting', 'Blogging', 'Social Media Content'],
-        },
-        'Business & Marketing': {
-            icon: 'trending-up',
-            skills: ['SEO', 'Social Media Marketing', 'Growth Hacking', 'Email Marketing', 'Content Marketing', 'Analytics'],
-        },
-        'Coaching & Mentoring': {
-            icon: 'people',
-            skills: ['Career Coaching', 'Business Coaching', 'Life Coaching', 'Leadership', 'Personal Development'],
-        },
-        'Education': {
-            icon: 'school',
-            skills: ['Teaching', 'Tutoring', 'Curriculum Development', 'Online Courses', 'Academic Research', 'Mentoring'],
-        },
-        'Data & Analytics': {
-            icon: 'bar-chart',
-            skills: ['Data Science', 'Machine Learning', 'Data Analysis', 'Business Intelligence', 'Statistics', 'AI'],
-        },
-        'Creative Arts': {
-            icon: 'musical-notes',
-            skills: ['Music Production', 'Sound Design', '3D Modeling', 'Animation', 'Game Design', 'Digital Art'],
-        },
-        'Languages': {
-            icon: 'globe',
-            skills: ['Translation', 'Interpretation', 'Language Teaching', 'Copywriting', 'Technical Writing'],
-        },
-        'Finance & Accounting': {
-            icon: 'cash',
-            skills: ['Financial Planning', 'Accounting', 'Investment', 'Tax Consulting', 'Bookkeeping', 'Cryptocurrency'],
-        },
+    const [fetchedCategories, setFetchedCategories] = useState([]);
+
+    useEffect(() => {
+        fetchCategories();
+    }, []);
+
+    const fetchCategories = async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/categories`);
+            if (response.ok) {
+                const data = await response.json();
+                setFetchedCategories(data);
+            }
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+        }
     };
 
-    const categories = Object.keys(skillsTaxonomy);
+    const categories = fetchedCategories.map(c => c.name);
 
     const levels = [
         { value: 'beginner', label: 'Beginner' },
@@ -353,7 +328,7 @@ const CreateExchangeRequest = ({ navigation }) => {
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>Skill You're Looking For *</Text>
                     <View style={styles.skillsSelectionContainer}>
-                        {skillsTaxonomy[category].skills.map((skill) => (
+                        {fetchedCategories.find(c => c.name === category)?.subcategories?.map((skill) => (
                             <TouchableOpacity
                                 key={skill}
                                 style={[
