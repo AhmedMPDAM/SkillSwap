@@ -19,7 +19,11 @@ const CategoryManagement = ({ navigation }) => {
     const fetchCategories = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_BASE_URL}/api/categories`); // Public endpoint
+            const response = await fetch(`${API_BASE_URL}/api/categories`, {
+                headers: {
+                    'ngrok-skip-browser-warning': 'true',
+                },
+            });
             if (response.ok) {
                 const data = await response.json();
                 setCategories(data);
@@ -45,6 +49,7 @@ const CategoryManagement = ({ navigation }) => {
             const headers = {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true',
             };
 
             let url, body, method;
@@ -92,7 +97,10 @@ const CategoryManagement = ({ navigation }) => {
                             const token = await tokenStorage.getAccessToken();
                             const response = await fetch(`${API_BASE_URL}/api/categories/${id}`, {
                                 method: 'DELETE',
-                                headers: { 'Authorization': `Bearer ${token}` }
+                                headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'ngrok-skip-browser-warning': 'true',
+                                }
                             });
                             if (response.ok) {
                                 fetchCategories();
@@ -124,7 +132,8 @@ const CategoryManagement = ({ navigation }) => {
                                 method: 'DELETE',
                                 headers: {
                                     'Authorization': `Bearer ${token}`,
-                                    'Content-Type': 'application/json'
+                                    'Content-Type': 'application/json',
+                                    'ngrok-skip-browser-warning': 'true',
                                 },
                                 body: JSON.stringify({ subcategory: subcategoryName })
                             });

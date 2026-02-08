@@ -20,8 +20,9 @@ const AdminDashboard = ({ navigation }) => {
             const token = await tokenStorage.getAccessToken();
             const response = await fetch(`${API_BASE_URL}/api/admin/stats`, {
                 headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                    'Authorization': `Bearer ${token}`,
+                    'ngrok-skip-browser-warning': 'true',
+                },
             });
 
             if (response.ok) {

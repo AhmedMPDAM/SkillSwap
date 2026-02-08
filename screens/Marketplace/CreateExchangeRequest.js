@@ -47,7 +47,11 @@ const CreateExchangeRequest = ({ navigation }) => {
 
     const fetchCategories = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/categories`);
+            const response = await fetch(`${API_BASE_URL}/api/categories`, {
+                headers: {
+                    'ngrok-skip-browser-warning': 'true',
+                },
+            });
             if (response.ok) {
                 const data = await response.json();
                 setFetchedCategories(data);

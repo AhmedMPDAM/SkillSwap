@@ -17,7 +17,11 @@ const Step2Skills = ({ selectedSkills, setSelectedSkills }) => {
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/categories`);
+                const response = await fetch(`${API_BASE_URL}/api/categories`, {
+                    headers: {
+                        'ngrok-skip-browser-warning': 'true',
+                    },
+                });
                 if (response.ok) {
                     const data = await response.json();
                     setCategories(data);
