@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { tokenStorage } from '../../utils/tokenStorage';
+import { useSocket } from '../../context/SocketContext';
 
 const { width } = Dimensions.get('window');
 
@@ -26,7 +27,7 @@ const HomeScreen = ({ navigation }) => {
     const [menuVisible, setMenuVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [userCredits, setUserCredits] = useState(150);
-    const [notifications, setNotifications] = useState(3);
+    const { unreadCount } = useSocket();
     const [userRole, setUserRole] = useState(null);
     const slideAnim = useRef(new Animated.Value(-width * 0.75)).current;
     const scrollViewRef = useRef(null);
@@ -307,11 +308,14 @@ const HomeScreen = ({ navigation }) => {
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Skill Swap</Text>
                 <View style={styles.headerRight}>
-                    <TouchableOpacity style={styles.notificationButton}>
+                    <TouchableOpacity
+                        style={styles.notificationButton}
+                        onPress={() => navigation.navigate('Notifications')}
+                    >
                         <Ionicons name="notifications-outline" size={28} color="#007AFF" />
-                        {notifications > 0 && (
+                        {unreadCount > 0 && (
                             <View style={styles.notificationBadge}>
-                                <Text style={styles.badgeText}>{notifications}</Text>
+                                <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
                             </View>
                         )}
                     </TouchableOpacity>

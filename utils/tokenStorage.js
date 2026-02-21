@@ -4,11 +4,12 @@ const TOKEN_KEYS = {
   ACCESS_TOKEN: '@skillswap_access_token',
   REFRESH_TOKEN: '@skillswap_refresh_token',
   USER_ROLE: '@skillswap_user_role',
+  USER_ID: '@skillswap_user_id',
 };
 
 export const tokenStorage = {
   // Store tokens
-  async setTokens(accessToken, refreshToken, role = null) {
+  async setTokens(accessToken, refreshToken, role = null, userId = null) {
     try {
       const MultiSetArgs = [
         [TOKEN_KEYS.ACCESS_TOKEN, accessToken],
@@ -16,6 +17,9 @@ export const tokenStorage = {
       ];
       if (role) {
         MultiSetArgs.push([TOKEN_KEYS.USER_ROLE, role]);
+      }
+      if (userId) {
+        MultiSetArgs.push([TOKEN_KEYS.USER_ID, userId]);
       }
       await AsyncStorage.multiSet(MultiSetArgs);
     } catch (error) {
@@ -54,6 +58,16 @@ export const tokenStorage = {
     }
   },
 
+  // Get user ID
+  async getUserId() {
+    try {
+      return await AsyncStorage.getItem(TOKEN_KEYS.USER_ID);
+    } catch (error) {
+      console.error('Error getting user ID:', error);
+      return null;
+    }
+  },
+
   // Get both tokens
   async getTokens() {
     try {
@@ -88,6 +102,7 @@ export const tokenStorage = {
         TOKEN_KEYS.ACCESS_TOKEN,
         TOKEN_KEYS.REFRESH_TOKEN,
         TOKEN_KEYS.USER_ROLE,
+        TOKEN_KEYS.USER_ID,
       ]);
     } catch (error) {
       console.error('Error clearing tokens:', error);

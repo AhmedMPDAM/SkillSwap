@@ -14,12 +14,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { tokenStorage } from '../utils/tokenStorage';
+import { useSocket } from '../context/SocketContext';
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const { refreshSocket } = useSocket();
 
     const handleLogin = async () => {
         if (!email || !password) {
@@ -42,7 +44,14 @@ const LoginScreen = ({ navigation }) => {
             if (response.ok) {
                 // Store tokens in AsyncStorage
                 if (data.accessToken && data.refreshToken) {
-                    await tokenStorage.setTokens(data.accessToken, data.refreshToken, data.user?.role);
+                    await tokenStorage.setTokens(
+                        data.accessToken,
+                        data.refreshToken,
+                        data.user?.role,
+                        data.user?._id
+                    );
+                    // Ensure the socket joins the user's private room after login
+                    await refreshSocket();
                 }
                 Alert.alert('Success', 'Login successful!');
                 navigation.navigate('Home');

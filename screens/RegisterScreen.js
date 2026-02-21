@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { tokenStorage } from '../utils/tokenStorage';
+import { useSocket } from '../context/SocketContext';
 import Step1Profile from './RegisterSteps/Step1Profile';
 import Step2Skills from './RegisterSteps/Step2Skills';
 import Step3Account from './RegisterSteps/Step3Account';
@@ -20,6 +21,7 @@ import Step3Account from './RegisterSteps/Step3Account';
 const RegisterScreen = ({ navigation }) => {
     const [currentStep, setCurrentStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const { refreshSocket } = useSocket();
 
     // Step 1 data
     const [fullName, setFullName] = useState('');
@@ -98,7 +100,14 @@ const RegisterScreen = ({ navigation }) => {
             if (response.ok) {
                 // Store tokens in AsyncStorage
                 if (data.accessToken && data.refreshToken) {
-                    await tokenStorage.setTokens(data.accessToken, data.refreshToken, data.user?.role);
+                    await tokenStorage.setTokens(
+                        data.accessToken,
+                        data.refreshToken,
+                        data.user?.role,
+                        data.user?._id
+                    );
+                    // Ensure the socket joins the user's private room after registration
+                    await refreshSocket();
                 }
                 Alert.alert('Success', 'Registration successful!', [
                     {
