@@ -12,10 +12,19 @@ const NotificationsScreen = () => {
         markAsRead(notification.id);
 
         if (notification.type === 'proposal_received') {
+            // Request owner received a new proposal → open chat
             navigation.navigate('Chat', {
+                chatId: notification.proposalId,
                 requestId: notification.requestId,
                 proposalId: notification.proposalId,
-                proposerId: notification.proposerId
+                proposerId: notification.proposerId,
+            });
+        } else if (notification.type === 'chat_ready') {
+            // Proposer's offer was accepted → open the chat
+            navigation.navigate('Chat', {
+                chatId: notification.chatId || notification.proposalId,
+                requestId: notification.requestId,
+                proposalId: notification.proposalId,
             });
         }
     };
