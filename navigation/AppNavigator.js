@@ -12,6 +12,7 @@ import ProfileScreen from '../screens/Profile/Profile';
 import AdminDashboard from '../screens/Admin/AdminDashboard';
 import CategoryManagement from '../screens/Admin/CategoryManagement';
 import ChatScreen from '../screens/Chat/ChatScreen';
+import MessagesScreen from '../screens/Chat/MessagesScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 
 const Stack = createStackNavigator();
@@ -112,6 +113,13 @@ const AppNavigator = () => {
             <Stack.Screen
                 name="Chat"
                 component={ChatScreen}
+                options={{
+                    animationEnabled: true,
+                }}
+            />
+            <Stack.Screen
+                name="Messages"
+                component={MessagesScreen}
                 options={{
                     animationEnabled: true,
                 }}

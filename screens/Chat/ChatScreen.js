@@ -8,12 +8,12 @@ import {
     TouchableOpacity,
     KeyboardAvoidingView,
     Platform,
-    SafeAreaView,
     ActivityIndicator,
     StatusBar,
     Animated,
     Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
@@ -124,7 +124,6 @@ const ChatScreen = () => {
             const uid = await tokenStorage.getUserId();
             setCurrentUserId(uid);
 
-            // Optionally fetch user's name from backend
             try {
                 const token = await tokenStorage.getAccessToken();
                 const res = await fetch(`${API_BASE_URL}/api/profile`, {
@@ -157,7 +156,6 @@ const ChatScreen = () => {
                 const data = snap.data();
                 setChatMeta(data);
 
-                // Evaluate expiry
                 const expired = isExpired(data.offerExpiresAt);
                 const inactive = !data.isActive;
 
@@ -190,7 +188,6 @@ const ChatScreen = () => {
 
         fetchChatMeta();
 
-        // Live listener on chat doc for isActive changes
         const chatRef = doc(db, 'chats', chatId);
         const unsubMeta = onSnapshot(chatRef, (snap) => {
             if (!snap.exists()) return;
@@ -215,7 +212,6 @@ const ChatScreen = () => {
         const unsubMessages = onSnapshot(q, (snapshot) => {
             const msgs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
             setMessages(msgs);
-            // Scroll to bottom
             setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
         });
 
@@ -227,7 +223,6 @@ const ChatScreen = () => {
         const text = newMessage.trim();
         if (!text || !chatId || !currentUserId || chatDisabled || sending) return;
 
-        // Double-check real-time expiry before sending
         if (chatMeta) {
             const expired = isExpired(chatMeta.offerExpiresAt);
             if (expired || !chatMeta.isActive) {
@@ -251,7 +246,6 @@ const ChatScreen = () => {
 
             await addDoc(messagesRef, messageData);
 
-            // Update lastMessage on the chat document
             const chatRef = doc(db, 'chats', chatId);
             await updateDoc(chatRef, {
                 lastMessageAt: serverTimestamp(),
@@ -260,7 +254,7 @@ const ChatScreen = () => {
         } catch (err) {
             console.error('Error sending message:', err);
             Alert.alert('Error', 'Failed to send message. Please try again.');
-            setNewMessage(text); // restore
+            setNewMessage(text);
         } finally {
             setSending(false);
         }
@@ -279,7 +273,8 @@ const ChatScreen = () => {
     if (loading) {
         return (
             <SafeAreaView style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#6C5CE7" />
+                <StatusBar barStyle="dark-content" backgroundColor="#F2F2F7" />
+                <ActivityIndicator size="large" color="#007AFF" />
                 <Text style={styles.loadingText}>Loading chat…</Text>
             </SafeAreaView>
         );
@@ -287,16 +282,15 @@ const ChatScreen = () => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
+            <StatusBar barStyle="dark-content" backgroundColor="#F2F2F7" />
 
             {/* ── Header ── */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={22} color="#fff" />
+                    <Ionicons name="arrow-back" size={22} color="#007AFF" />
                 </TouchableOpacity>
 
                 <View style={styles.headerCenter}>
-                    {/* Avatar */}
                     <View style={styles.headerAvatar}>
                         <Text style={styles.headerAvatarText}>
                             {(otherUserName || '?').charAt(0).toUpperCase()}
@@ -323,7 +317,7 @@ const ChatScreen = () => {
                     <Ionicons
                         name={chatDisabled ? 'lock-closed' : 'time-outline'}
                         size={14}
-                        color={chatDisabled ? '#ff6b6b' : '#ffeaa7'}
+                        color={chatDisabled ? '#FF3B30' : '#FF9500'}
                     />
                     <Text style={[styles.expiryText, chatDisabled && styles.expiryTextDisabled]}>
                         {expiryLabel}
@@ -335,7 +329,7 @@ const ChatScreen = () => {
             <Animated.View style={[styles.messagesWrapper, { opacity: fadeAnim }]}>
                 {messages.length === 0 ? (
                     <View style={styles.emptyChat}>
-                        <Ionicons name="chatbubbles-outline" size={60} color="#6C5CE7" style={{ opacity: 0.4 }} />
+                        <Ionicons name="chatbubbles-outline" size={60} color="#007AFF" style={{ opacity: 0.3 }} />
                         <Text style={styles.emptyChatText}>No messages yet</Text>
                         <Text style={styles.emptyChatSub}>Start the conversation!</Text>
                     </View>
@@ -357,7 +351,7 @@ const ChatScreen = () => {
             {/* ── Input area ── */}
             {chatDisabled ? (
                 <View style={styles.disabledBar}>
-                    <Ionicons name="lock-closed" size={18} color="#ff6b6b" />
+                    <Ionicons name="lock-closed" size={18} color="#FF3B30" />
                     <Text style={styles.disabledText}>
                         This chat is now read-only — the offer has ended.
                     </Text>
@@ -374,7 +368,7 @@ const ChatScreen = () => {
                             value={newMessage}
                             onChangeText={setNewMessage}
                             placeholder="Type a message…"
-                            placeholderTextColor="#8e8ea0"
+                            placeholderTextColor="#8E8E93"
                             multiline
                             maxLength={1000}
                             returnKeyType="send"
@@ -404,16 +398,16 @@ const styles = StyleSheet.create({
     // Layout
     container: {
         flex: 1,
-        backgroundColor: '#0f0f1a',
+        backgroundColor: '#F2F2F7',
     },
     loadingContainer: {
         flex: 1,
-        backgroundColor: '#0f0f1a',
+        backgroundColor: '#F2F2F7',
         justifyContent: 'center',
         alignItems: 'center',
     },
     loadingText: {
-        color: '#8e8ea0',
+        color: '#8E8E93',
         marginTop: 12,
         fontSize: 15,
     },
@@ -422,11 +416,16 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1a1a2e',
+        backgroundColor: '#FFFFFF',
         paddingHorizontal: 12,
         paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(108,92,231,0.3)',
+        borderBottomColor: '#E5E5EA',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 4,
+        elevation: 2,
     },
     backBtn: {
         padding: 8,
@@ -442,7 +441,7 @@ const styles = StyleSheet.create({
         width: 38,
         height: 38,
         borderRadius: 19,
-        backgroundColor: '#6C5CE7',
+        backgroundColor: '#007AFF',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 10,
@@ -453,13 +452,13 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     headerTitle: {
-        color: '#ffffff',
+        color: '#000000',
         fontSize: 16,
         fontWeight: '700',
         maxWidth: 180,
     },
     headerSubtitle: {
-        color: '#a29bfe',
+        color: '#8E8E93',
         fontSize: 12,
         maxWidth: 180,
         marginTop: 1,
@@ -473,27 +472,28 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(255, 234, 167, 0.12)',
-        paddingVertical: 6,
+        backgroundColor: 'rgba(255, 149, 0, 0.1)',
+        paddingVertical: 7,
         paddingHorizontal: 14,
         gap: 6,
     },
     expiryBannerDisabled: {
-        backgroundColor: 'rgba(255, 107, 107, 0.12)',
+        backgroundColor: 'rgba(255, 59, 48, 0.08)',
     },
     expiryText: {
-        color: '#ffeaa7',
+        color: '#FF9500',
         fontSize: 12,
         fontWeight: '600',
         marginLeft: 4,
     },
     expiryTextDisabled: {
-        color: '#ff6b6b',
+        color: '#FF3B30',
     },
 
     // Messages
     messagesWrapper: {
         flex: 1,
+        backgroundColor: '#F2F2F7',
     },
     messageList: {
         paddingHorizontal: 16,
@@ -507,13 +507,13 @@ const styles = StyleSheet.create({
         marginTop: 60,
     },
     emptyChatText: {
-        color: '#8e8ea0',
+        color: '#8E8E93',
         fontSize: 18,
         fontWeight: '600',
         marginTop: 16,
     },
     emptyChatSub: {
-        color: '#6e6e80',
+        color: '#C7C7CC',
         fontSize: 13,
         marginTop: 6,
     },
@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
         width: 28,
         height: 28,
         borderRadius: 14,
-        backgroundColor: '#6C5CE7',
+        backgroundColor: '#007AFF',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 6,
@@ -552,22 +552,22 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
+        shadowOpacity: 0.08,
         shadowRadius: 3,
         elevation: 2,
     },
     bubbleMe: {
-        backgroundColor: '#6C5CE7',
+        backgroundColor: '#007AFF',
         borderBottomRightRadius: 4,
     },
     bubbleThem: {
-        backgroundColor: '#1e1e30',
+        backgroundColor: '#FFFFFF',
         borderBottomLeftRadius: 4,
         borderWidth: 1,
-        borderColor: 'rgba(108,92,231,0.2)',
+        borderColor: '#E5E5EA',
     },
     senderName: {
-        color: '#a29bfe',
+        color: '#007AFF',
         fontSize: 11,
         fontWeight: '700',
         marginBottom: 3,
@@ -577,21 +577,21 @@ const styles = StyleSheet.create({
         lineHeight: 20,
     },
     bubbleTextMe: {
-        color: '#ffffff',
+        color: '#FFFFFF',
     },
     bubbleTextThem: {
-        color: '#e0e0f0',
+        color: '#000000',
     },
     timeText: {
         fontSize: 10,
         marginTop: 4,
     },
     timeTextMe: {
-        color: 'rgba(255,255,255,0.6)',
+        color: 'rgba(255,255,255,0.7)',
         textAlign: 'right',
     },
     timeTextThem: {
-        color: 'rgba(200,200,220,0.5)',
+        color: '#8E8E93',
         textAlign: 'left',
     },
 
@@ -601,9 +601,9 @@ const styles = StyleSheet.create({
         marginVertical: 10,
     },
     systemMessageText: {
-        color: '#6e6e80',
+        color: '#8E8E93',
         fontSize: 12,
-        backgroundColor: 'rgba(108,92,231,0.1)',
+        backgroundColor: 'rgba(0,122,255,0.08)',
         paddingHorizontal: 12,
         paddingVertical: 4,
         borderRadius: 12,
@@ -615,39 +615,39 @@ const styles = StyleSheet.create({
         alignItems: 'flex-end',
         paddingHorizontal: 12,
         paddingVertical: 10,
-        backgroundColor: '#1a1a2e',
+        backgroundColor: '#FFFFFF',
         borderTopWidth: 1,
-        borderTopColor: 'rgba(108,92,231,0.2)',
+        borderTopColor: '#E5E5EA',
     },
     input: {
         flex: 1,
-        backgroundColor: '#0f0f1a',
+        backgroundColor: '#F2F2F7',
         borderRadius: 22,
         paddingHorizontal: 16,
         paddingVertical: 10,
         paddingTop: 10,
-        color: '#ffffff',
+        color: '#000000',
         fontSize: 15,
         maxHeight: 120,
         borderWidth: 1,
-        borderColor: 'rgba(108,92,231,0.4)',
+        borderColor: '#E5E5EA',
         marginRight: 10,
     },
     sendBtn: {
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: '#6C5CE7',
+        backgroundColor: '#007AFF',
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#6C5CE7',
+        shadowColor: '#007AFF',
         shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.5,
+        shadowOpacity: 0.3,
         shadowRadius: 6,
         elevation: 5,
     },
     sendBtnDisabled: {
-        backgroundColor: '#3a3a5c',
+        backgroundColor: '#C7C7CC',
         shadowOpacity: 0,
         elevation: 0,
     },
@@ -657,15 +657,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(255,107,107,0.1)',
+        backgroundColor: 'rgba(255,59,48,0.08)',
         paddingVertical: 14,
         paddingHorizontal: 20,
         borderTopWidth: 1,
-        borderTopColor: 'rgba(255,107,107,0.2)',
+        borderTopColor: 'rgba(255,59,48,0.15)',
         gap: 8,
     },
     disabledText: {
-        color: '#ff6b6b',
+        color: '#FF3B30',
         fontSize: 13,
         fontWeight: '600',
         marginLeft: 6,
