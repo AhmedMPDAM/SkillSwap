@@ -27,7 +27,7 @@ const HomeScreen = ({ navigation }) => {
     const [menuVisible, setMenuVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [userCredits, setUserCredits] = useState(150);
-    const { unreadCount } = useSocket();
+    const { unreadCount, clearNotifications } = useSocket();
     const [userRole, setUserRole] = useState(null);
     const slideAnim = useRef(new Animated.Value(-width * 0.75)).current;
     const scrollViewRef = useRef(null);
@@ -106,11 +106,11 @@ const HomeScreen = ({ navigation }) => {
                     text: 'Logout',
                     onPress: async () => {
                         try {
-                            // Clear tokens from AsyncStorage
-                            await AsyncStorage.multiRemove([
-                                '@skillswap_access_token',
-                                '@skillswap_refresh_token',
-                            ]);
+                            // Clear this user's notifications before switching accounts
+                            clearNotifications();
+
+                            // Clear all tokens from AsyncStorage
+                            await tokenStorage.clearTokens();
 
                             // Close menu
                             toggleMenu();
@@ -215,6 +215,16 @@ const HomeScreen = ({ navigation }) => {
                         >
                             <Ionicons name="shield-checkmark-outline" size={24} color="#FF3B30" />
                             <Text style={styles.menuItemText}>Admin Dashboard</Text>
+                        </TouchableOpacity>
+                    )}
+
+                    {(userRole === 'examiner' || userRole === 'admin') && (
+                        <TouchableOpacity
+                            style={styles.menuItemFull}
+                            onPress={() => handleMenuNavigation('ExaminerDashboard')}
+                        >
+                            <Ionicons name="eye-outline" size={24} color="#667eea" />
+                            <Text style={styles.menuItemText}>Examination Queue</Text>
                         </TouchableOpacity>
                     )}
 

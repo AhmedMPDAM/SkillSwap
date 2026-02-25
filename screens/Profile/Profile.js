@@ -19,11 +19,13 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { tokenStorage } from '../../utils/tokenStorage';
+import { useSocket } from '../../context/SocketContext';
 
 
 
 
 const ProfileScreen = ({ navigation }) => {
+    const { clearNotifications } = useSocket();
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -523,6 +525,9 @@ const ProfileScreen = ({ navigation }) => {
                                 });
                             }
 
+                            // Clear notifications for this user before logging out
+                            clearNotifications();
+
                             // Clear tokens from local storage
                             await tokenStorage.clearTokens();
 
@@ -533,7 +538,8 @@ const ProfileScreen = ({ navigation }) => {
                             });
                         } catch (error) {
                             console.error('Logout error:', error);
-                            // Even if the API call fails, clear tokens and navigate to login
+                            // Even if the API call fails, clear notifications/tokens and navigate to login
+                            clearNotifications();
                             await tokenStorage.clearTokens();
                             navigation.reset({
                                 index: 0,

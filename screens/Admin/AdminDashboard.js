@@ -3,22 +3,24 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIn
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 import { tokenStorage } from '../../utils/tokenStorage';
 import { API_BASE_URL } from '../../config/apiConfig';
 
 const { width } = Dimensions.get('window');
 
 const AdminDashboard = ({ navigation }) => {
-    const [stats, setStats] = useState({ users: 0, totalCredits: 0, requests: 0 });
+    const [stats, setStats] = useState({ users: 0, totalCredits: 0, requests: 0, pendingExaminations: 0 });
     const [loading, setLoading] = useState(true);
+    const [userRole, setUserRole] = useState(null);
 
-    useEffect(() => {
-        fetchStats();
-    }, []);
-
-    const fetchStats = async () => {
+    const fetchStats = useCallback(async () => {
         try {
             const token = await tokenStorage.getAccessToken();
+            const role = await tokenStorage.getUserRole();
+            setUserRole(role);
+
             const response = await fetch(`${API_BASE_URL}/api/admin/stats`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -34,13 +36,19 @@ const AdminDashboard = ({ navigation }) => {
             }
         } catch (error) {
             console.error('Stats fetch error:', error);
-            Alert.alert('Error', 'Network error');
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const StatusCard = ({ title, count, icon, colors }) => (
+    useFocusEffect(
+        useCallback(() => {
+            setLoading(true);
+            fetchStats();
+        }, [fetchStats])
+    );
+
+    const StatusCard = ({ title, count, icon, colors, badge }) => (
         <LinearGradient
             colors={colors}
             start={{ x: 0, y: 0 }}
@@ -52,8 +60,15 @@ const AdminDashboard = ({ navigation }) => {
                     <Text style={styles.cardTitle}>{title}</Text>
                     <Text style={styles.cardCount}>{count}</Text>
                 </View>
-                <View style={[styles.iconContainer, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                    <Ionicons name={icon} size={32} color="#FFFFFF" />
+                <View style={{ position: 'relative' }}>
+                    <View style={[styles.iconContainer, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                        <Ionicons name={icon} size={32} color="#FFFFFF" />
+                    </View>
+                    {badge > 0 && (
+                        <View style={styles.cardBadge}>
+                            <Text style={styles.cardBadgeText}>{badge > 9 ? '9+' : badge}</Text>
+                        </View>
+                    )}
                 </View>
             </View>
         </LinearGradient>
@@ -67,7 +82,9 @@ const AdminDashboard = ({ navigation }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Admin Dashboard</Text>
+                <Text style={styles.headerTitle}>
+                    {userRole === 'examiner' ? 'Examiner Dashboard' : 'Admin Dashboard'}
+                </Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -95,41 +112,78 @@ const AdminDashboard = ({ navigation }) => {
                                 icon="swap-horizontal-outline"
                                 colors={['#fa709a', '#fee140']}
                             />
+                            <StatusCard
+                                title="Pending Reviews"
+                                count={stats.pendingExaminations ?? 0}
+                                icon="eye-outline"
+                                colors={['#667eea', '#764ba2']}
+                                badge={stats.pendingExaminations ?? 0}
+                            />
                         </View>
 
-                        <Text style={styles.sectionTitle}>Management</Text>
+                        {/* ── Examination queue (always visible for both admin & examiner) ── */}
+                        <Text style={styles.sectionTitle}>Examination</Text>
 
                         <TouchableOpacity
                             style={styles.menuItem}
-                            onPress={() => navigation.navigate('CategoryManagement')}
+                            onPress={() => navigation.navigate('ExaminerDashboard')}
                             activeOpacity={0.7}
                         >
-                            <View style={[styles.menuIcon, { backgroundColor: '#E1F5FE' }]}>
-                                <Ionicons name="list-outline" size={24} color="#007AFF" />
+                            <View style={[styles.menuIcon, { backgroundColor: '#EDE7F6' }]}>
+                                <Ionicons name="eye-outline" size={24} color="#667eea" />
                             </View>
                             <View style={styles.menuTextContainer}>
-                                <Text style={styles.menuTitle}>Manage Categories</Text>
-                                <Text style={styles.menuSubtitle}>Add, remove and edit categories</Text>
+                                <Text style={styles.menuTitle}>Examination Queue</Text>
+                                <Text style={styles.menuSubtitle}>Review admin_quantification proposals</Text>
                             </View>
-                            <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+                            <View style={styles.menuRight}>
+                                {stats.pendingExaminations > 0 && (
+                                    <View style={styles.menuBadge}>
+                                        <Text style={styles.menuBadgeText}>
+                                            {stats.pendingExaminations > 9 ? '9+' : stats.pendingExaminations}
+                                        </Text>
+                                    </View>
+                                )}
+                                <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+                            </View>
                         </TouchableOpacity>
 
-                        {/* Additional admin actions can be added here */}
-                        <TouchableOpacity
-                            style={styles.menuItem}
-                            onPress={() => Alert.alert('Coming Soon', 'User management features will be here')}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[styles.menuIcon, { backgroundColor: '#FFF3E0' }]}>
-                                <Ionicons name="person-circle-outline" size={24} color="#FF9800" />
-                            </View>
-                            <View style={styles.menuTextContainer}>
-                                <Text style={styles.menuTitle}>Manage Users</Text>
-                                <Text style={styles.menuSubtitle}>View user details and ban users</Text>
-                            </View>
-                            <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
-                        </TouchableOpacity>
+                        {/* ── Admin-only management options ── */}
+                        {userRole === 'admin' && (
+                            <>
+                                <Text style={styles.sectionTitle}>Management</Text>
 
+                                <TouchableOpacity
+                                    style={styles.menuItem}
+                                    onPress={() => navigation.navigate('CategoryManagement')}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={[styles.menuIcon, { backgroundColor: '#E1F5FE' }]}>
+                                        <Ionicons name="list-outline" size={24} color="#007AFF" />
+                                    </View>
+                                    <View style={styles.menuTextContainer}>
+                                        <Text style={styles.menuTitle}>Manage Categories</Text>
+                                        <Text style={styles.menuSubtitle}>Add, remove and edit categories</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.menuItem}
+                                    onPress={() => Alert.alert('Coming Soon', 'User management features will be here')}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={[styles.menuIcon, { backgroundColor: '#FFF3E0' }]}>
+                                        <Ionicons name="person-circle-outline" size={24} color="#FF9800" />
+                                    </View>
+                                    <View style={styles.menuTextContainer}>
+                                        <Text style={styles.menuTitle}>Manage Users</Text>
+                                        <Text style={styles.menuSubtitle}>View user details and ban users</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+                                </TouchableOpacity>
+                            </>
+                        )}
                     </>
                 )}
             </ScrollView>
@@ -202,6 +256,25 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    cardBadge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        backgroundColor: '#FF3B30',
+        borderRadius: 10,
+        minWidth: 20,
+        height: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 4,
+        borderWidth: 2,
+        borderColor: '#FFFFFF',
+    },
+    cardBadgeText: {
+        color: '#FFF',
+        fontSize: 10,
+        fontWeight: '800',
+    },
     sectionTitle: {
         fontSize: 20,
         fontWeight: '700',
@@ -242,6 +315,25 @@ const styles = StyleSheet.create({
     menuSubtitle: {
         fontSize: 13,
         color: '#8E8E93',
+    },
+    menuRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    menuBadge: {
+        backgroundColor: '#FF3B30',
+        borderRadius: 12,
+        minWidth: 24,
+        height: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 6,
+    },
+    menuBadgeText: {
+        color: '#FFF',
+        fontSize: 12,
+        fontWeight: '700',
     },
 });
 

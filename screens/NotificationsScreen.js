@@ -12,7 +12,6 @@ const NotificationsScreen = () => {
         markAsRead(notification.id);
 
         if (notification.type === 'proposal_received') {
-            // Request owner received a new proposal → open chat
             navigation.navigate('Chat', {
                 chatId: notification.proposalId,
                 requestId: notification.requestId,
@@ -20,7 +19,15 @@ const NotificationsScreen = () => {
                 proposerId: notification.proposerId,
             });
         } else if (notification.type === 'chat_ready') {
-            // Proposer's offer was accepted → open the chat
+            navigation.navigate('Chat', {
+                chatId: notification.chatId || notification.proposalId,
+                requestId: notification.requestId,
+                proposalId: notification.proposalId,
+            });
+        } else if (
+            notification.type === 'examiner_approved' ||
+            notification.type === 'examiner_approved_owner'
+        ) {
             navigation.navigate('Chat', {
                 chatId: notification.chatId || notification.proposalId,
                 requestId: notification.requestId,
@@ -29,21 +36,39 @@ const NotificationsScreen = () => {
         }
     };
 
-    const renderItem = ({ item }) => (
-        <TouchableOpacity
-            style={[styles.notificationItem, !item.read && styles.unreadItem]}
-            onPress={() => handleNotificationPress(item)}
-        >
-            <View style={styles.iconContainer}>
-                <Ionicons name="notifications" size={24} color="#007AFF" />
-            </View>
-            <View style={styles.contentContainer}>
-                <Text style={styles.notificationMessage}>{item.message}</Text>
-                <Text style={styles.timeText}>{new Date(item.timestamp).toLocaleString()}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
-        </TouchableOpacity>
-    );
+    const getNotificationIcon = (type) => {
+        switch (type) {
+            case 'proposal_received':
+                return { name: 'newspaper-outline', color: '#007AFF', bg: '#E5F2FF' };
+            case 'chat_ready':
+                return { name: 'chatbubble-outline', color: '#34C759', bg: '#E8F8ED' };
+            case 'examiner_approved':
+                return { name: 'checkmark-circle-outline', color: '#667eea', bg: '#EDE7F6' };
+            case 'examiner_approved_owner':
+                return { name: 'shield-checkmark-outline', color: '#667eea', bg: '#EDE7F6' };
+            default:
+                return { name: 'notifications', color: '#007AFF', bg: '#E5F2FF' };
+        }
+    };
+
+    const renderItem = ({ item }) => {
+        const iconInfo = getNotificationIcon(item.type);
+        return (
+            <TouchableOpacity
+                style={[styles.notificationItem, !item.read && styles.unreadItem]}
+                onPress={() => handleNotificationPress(item)}
+            >
+                <View style={[styles.iconContainer, { backgroundColor: iconInfo.bg }]}>
+                    <Ionicons name={iconInfo.name} size={24} color={iconInfo.color} />
+                </View>
+                <View style={styles.contentContainer}>
+                    <Text style={styles.notificationMessage}>{item.message}</Text>
+                    <Text style={styles.timeText}>{new Date(item.timestamp).toLocaleString()}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+            </TouchableOpacity>
+        );
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -129,9 +154,10 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
     notificationMessage: {
-        fontSize: 16,
+        fontSize: 15,
         color: '#000000',
         marginBottom: 4,
+        lineHeight: 20,
     },
     timeText: {
         fontSize: 12,

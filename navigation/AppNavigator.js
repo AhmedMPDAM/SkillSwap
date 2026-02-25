@@ -11,6 +11,8 @@ import TopRatedScreen from '../screens/TopRated/TopRated';
 import ProfileScreen from '../screens/Profile/Profile';
 import AdminDashboard from '../screens/Admin/AdminDashboard';
 import CategoryManagement from '../screens/Admin/CategoryManagement';
+import ExaminerDashboard from '../screens/Admin/ExaminerDashboard';
+import ExaminerReviewDetail from '../screens/Admin/ExaminerReviewDetail';
 import ChatScreen from '../screens/Chat/ChatScreen';
 import MessagesScreen from '../screens/Chat/MessagesScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
@@ -106,9 +108,17 @@ const AppNavigator = () => {
             <Stack.Screen
                 name="CategoryManagement"
                 component={CategoryManagement}
-                options={{
-                    animationEnabled: true,
-                }}
+                options={{ animationEnabled: true }}
+            />
+            <Stack.Screen
+                name="ExaminerDashboard"
+                component={ExaminerDashboard}
+                options={{ animationEnabled: true }}
+            />
+            <Stack.Screen
+                name="ExaminerReviewDetail"
+                component={ExaminerReviewDetail}
+                options={{ animationEnabled: true }}
             />
             <Stack.Screen
                 name="Chat"
