@@ -113,6 +113,9 @@ const ChatScreen = () => {
     const [chatDisabled, setChatDisabled] = useState(false);
     const [expiryLabel, setExpiryLabel] = useState('');
     const [sending, setSending] = useState(false);
+    const [completing, setCompleting] = useState(false);
+    const [isRequestOwner, setIsRequestOwner] = useState(false);
+    const [exchangeCompleted, setExchangeCompleted] = useState(false);
 
     const flatListRef = useRef(null);
     const inputRef = useRef(null);
@@ -260,6 +263,90 @@ const ChatScreen = () => {
         }
     }, [newMessage, chatId, currentUserId, currentUserName, chatDisabled, sending, chatMeta]);
 
+    // ── Determine if current user is the request owner ────────────────────────
+    useEffect(() => {
+        if (chatMeta && currentUserId) {
+            const ownerId = chatMeta.requestOwnerInfo?.id || chatMeta.requestOwnerId;
+            setIsRequestOwner(ownerId === currentUserId);
+            // Check if already completed
+            if (chatMeta.status === 'completed' || chatMeta.isActive === false) {
+                setExchangeCompleted(chatMeta.status === 'completed');
+            }
+        }
+    }, [chatMeta, currentUserId]);
+
+    // ── Mark exchange as complete ─────────────────────────────────────────────
+    const handleMarkComplete = useCallback(() => {
+        if (!requestId) {
+            Alert.alert('Error', 'Request ID not found.');
+            return;
+        }
+
+        Alert.alert(
+            'Mark as Complete',
+            'Are you sure the work is done? This will release the locked credits to the service provider.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Complete & Pay',
+                    style: 'default',
+                    onPress: async () => {
+                        setCompleting(true);
+                        try {
+                            const token = await tokenStorage.getAccessToken();
+                            const response = await fetch(
+                                `${API_BASE_URL}/api/marketplace/requests/${requestId}/complete`,
+                                {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        Authorization: `Bearer ${token}`,
+                                        'ngrok-skip-browser-warning': 'true',
+                                    },
+                                    body: JSON.stringify({}),
+                                }
+                            );
+
+                            const data = await response.json();
+
+                            if (response.ok) {
+                                setExchangeCompleted(true);
+                                setChatDisabled(true);
+                                setExpiryLabel('Exchange completed ✓');
+
+                                // Post a system message in chat
+                                try {
+                                    const messagesRef = collection(db, 'chats', chatId, 'messages');
+                                    await addDoc(messagesRef, {
+                                        text: '✅ The exchange has been marked as complete. Credits have been transferred.',
+                                        type: 'system',
+                                        createdAt: serverTimestamp(),
+                                    });
+                                    // Close the chat room
+                                    const chatRef = doc(db, 'chats', chatId);
+                                    await updateDoc(chatRef, { isActive: false, status: 'completed' });
+                                } catch (_) { }
+
+                                Alert.alert(
+                                    '✅ Exchange Complete!',
+                                    'Credits have been successfully transferred to the service provider.',
+                                    [{ text: 'Great!', onPress: () => navigation.goBack() }]
+                                );
+                            } else {
+                                Alert.alert('Error', data.message || 'Failed to complete exchange.');
+                            }
+                        } catch (err) {
+                            console.error('Error completing exchange:', err);
+                            Alert.alert('Error', 'Could not complete the exchange. Please try again.');
+                        } finally {
+                            setCompleting(false);
+                        }
+                    },
+                },
+            ]
+        );
+    }, [requestId, chatId, navigation]);
+
     // ── Derive other user's name for header ──────────────────────────────────
     const otherUserName = chatMeta
         ? chatMeta.participants?.find((id) => id !== currentUserId)
@@ -308,7 +395,22 @@ const ChatScreen = () => {
                     </View>
                 </View>
 
-                <View style={styles.headerRight} />
+                {/* ── Complete button (only for request owner, only if not completed) ── */}
+                {isRequestOwner && !exchangeCompleted && !chatDisabled ? (
+                    <TouchableOpacity
+                        style={styles.completeBtn}
+                        onPress={handleMarkComplete}
+                        disabled={completing}
+                    >
+                        {completing ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                            <Text style={styles.completeBtnText}>✓ Done</Text>
+                        )}
+                    </TouchableOpacity>
+                ) : (
+                    <View style={styles.headerRight} />
+                )}
             </View>
 
             {/* ── Expiry Banner ── */}
@@ -465,6 +567,25 @@ const styles = StyleSheet.create({
     },
     headerRight: {
         width: 36,
+    },
+    completeBtn: {
+        backgroundColor: '#34C759',
+        borderRadius: 16,
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        minWidth: 60,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#34C759',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    completeBtnText: {
+        color: '#fff',
+        fontWeight: '700',
+        fontSize: 13,
     },
 
     // Expiry banner
