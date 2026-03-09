@@ -32,7 +32,10 @@ const TopRatedScreen = ({ navigation }) => {
                     <Text style={styles.userRating}>{item.rating}</Text>
                 </View>
             </View>
-            <TouchableOpacity style={styles.viewProfileButton}>
+            <TouchableOpacity
+                style={styles.viewProfileButton}
+                onPress={() => navigation.navigate('UserPublicProfile', { userId: item.id })}
+            >
                 <Text style={styles.viewProfileText}>View</Text>
                 <Ionicons name="chevron-forward" size={16} color="#007AFF" />
             </TouchableOpacity>

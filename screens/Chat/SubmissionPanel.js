@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
-    Alert, TextInput, ScrollView, Linking,
+    Alert, TextInput, ScrollView, Linking, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
@@ -177,13 +177,20 @@ const SideSection = ({ label, icon, color, mySubmissions, canUpload, canReview,
 };
 
 // ─── Main Panel ───────────────────────────────────────────────────────────────
-const SubmissionPanel = ({ requestId, proposalId, chatId, isRequestOwner, onExchangeCompleted }) => {
+const SubmissionPanel = ({ requestId, proposalId, chatId, isRequestOwner, onExchangeCompleted, otherUserId }) => {
     const [submissions, setSubmissions] = useState([]);
     const [approvalStatus, setApprovalStatus] = useState({});
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [expanded, setExpanded] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
+
+    // Rating modal state
+    const [showRatingModal, setShowRatingModal] = useState(false);
+    const [ratingStars, setRatingStars] = useState(0);
+    const [ratingComment, setRatingComment] = useState('');
+    const [ratingSubmitted, setRatingSubmitted] = useState(false);
+    const [ratingSubmitting, setRatingSubmitting] = useState(false);
 
     const myRole = isRequestOwner ? 'owner' : 'proposer';
     const theirRole = isRequestOwner ? 'proposer' : 'owner';
@@ -309,7 +316,14 @@ const SubmissionPanel = ({ requestId, proposalId, chatId, isRequestOwner, onExch
 
                             if (data.approvalStatus?.bothApproved) {
                                 onExchangeCompleted?.();
-                                Alert.alert('🎉 Exchange Complete!', 'Both parties have approved each other\'s work.');
+                                Alert.alert(
+                                    '🎉 Exchange Complete!',
+                                    'Both parties have approved each other\'s work. Would you like to rate this exchange?',
+                                    [
+                                        { text: 'Later', style: 'cancel' },
+                                        { text: 'Rate Now', onPress: () => setShowRatingModal(true) },
+                                    ]
+                                );
                             } else {
                                 Alert.alert('✅ Approved!', 'Waiting for the other party to also submit and approve.');
                             }
@@ -323,6 +337,62 @@ const SubmissionPanel = ({ requestId, proposalId, chatId, isRequestOwner, onExch
             },
         ]);
     }, [chatId, fetchSubmissions, onExchangeCompleted]);
+
+    // ── Submit Rating ─────────────────────────────────────────────────────────
+    const handleSubmitRating = useCallback(async () => {
+        if (ratingStars < 1 || ratingStars > 5) {
+            Alert.alert('Error', 'Please select a rating (1-5 stars)');
+            return;
+        }
+        setRatingSubmitting(true);
+        try {
+            const token = await tokenStorage.getAccessToken();
+            // We need the proposer ID — we get it from the submissions or the chat context
+            // The ratedUserId depends on who is rating: owner rates proposer, proposer rates owner
+            const res = await fetch(`${API_BASE_URL}/api/profile/ratings`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                    'ngrok-skip-browser-warning': 'true',
+                },
+                body: JSON.stringify({
+                    ratedUserId: otherUserId || '',
+                    proposalId,
+                    exchangeRequestId: requestId,
+                    stars: ratingStars,
+                    comment: ratingComment.trim(),
+                }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setRatingSubmitted(true);
+                setShowRatingModal(false);
+                Alert.alert('✅ Thank you!', 'Your rating has been submitted.');
+            } else {
+                Alert.alert('Error', data.message || 'Failed to submit rating.');
+            }
+        } catch (err) {
+            Alert.alert('Error', 'Could not submit rating.');
+        } finally {
+            setRatingSubmitting(false);
+        }
+    }, [ratingStars, ratingComment, requestId, proposalId, isRequestOwner, theirSubmissions, mySubmissions]);
+
+    // ─── Rating Stars Component ───────────────────────────────────────────────
+    const RatingStarsInput = () => (
+        <View style={s.ratingStarsRow}>
+            {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity key={star} onPress={() => setRatingStars(star)} activeOpacity={0.7}>
+                    <Ionicons
+                        name={star <= ratingStars ? 'star' : 'star-outline'}
+                        size={36}
+                        color={star <= ratingStars ? '#FFD700' : '#D1D1D6'}
+                    />
+                </TouchableOpacity>
+            ))}
+        </View>
+    );
 
     // ─── Render ───────────────────────────────────────────────────────────────
     if (loading) return <ActivityIndicator style={{ padding: 12 }} size="small" color="#007AFF" />;
@@ -350,6 +420,24 @@ const SubmissionPanel = ({ requestId, proposalId, chatId, isRequestOwner, onExch
                         <View style={s.completeBanner}>
                             <Ionicons name="checkmark-done-circle" size={20} color="#34C759" />
                             <Text style={s.completeBannerText}>Both sides approved! Exchange complete.</Text>
+                        </View>
+                    )}
+
+                    {/* Rate button if exchange is done and not yet rated */}
+                    {bothDone && !ratingSubmitted && (
+                        <TouchableOpacity
+                            style={s.rateBtn}
+                            onPress={() => setShowRatingModal(true)}
+                        >
+                            <Ionicons name="star" size={16} color="#FFD700" />
+                            <Text style={s.rateBtnText}>Rate This Exchange</Text>
+                        </TouchableOpacity>
+                    )}
+
+                    {ratingSubmitted && (
+                        <View style={s.ratedBanner}>
+                            <Ionicons name="checkmark-circle" size={16} color="#34C759" />
+                            <Text style={s.ratedBannerText}>You have rated this exchange</Text>
                         </View>
                     )}
 
@@ -390,6 +478,57 @@ const SubmissionPanel = ({ requestId, proposalId, chatId, isRequestOwner, onExch
                     <ActivityIndicator size="large" color="#007AFF" />
                 </View>
             )}
+
+            {/* ── Rating Modal ─────────────────────────────────────────────── */}
+            <Modal visible={showRatingModal} animationType="slide" transparent>
+                <View style={s.ratingOverlay}>
+                    <View style={s.ratingModal}>
+                        <View style={s.ratingModalHeader}>
+                            <Text style={s.ratingModalTitle}>Rate This Exchange</Text>
+                            <TouchableOpacity onPress={() => setShowRatingModal(false)}>
+                                <Ionicons name="close" size={24} color="#1C1C1E" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={s.ratingPrompt}>
+                            How would you rate the quality of work delivered?
+                        </Text>
+
+                        <RatingStarsInput />
+
+                        {ratingStars > 0 && (
+                            <Text style={s.ratingStarLabel}>
+                                {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][ratingStars]}
+                            </Text>
+                        )}
+
+                        <TextInput
+                            style={s.ratingInput}
+                            placeholder="Add a comment (optional, max 500 characters)…"
+                            placeholderTextColor="#8E8E93"
+                            value={ratingComment}
+                            onChangeText={(t) => setRatingComment(t.slice(0, 500))}
+                            multiline
+                            maxLength={500}
+                        />
+                        <Text style={s.ratingCharCount}>
+                            {ratingComment.length}/500
+                        </Text>
+
+                        <TouchableOpacity
+                            style={[s.ratingSubmitBtn, ratingStars === 0 && { opacity: 0.4 }]}
+                            disabled={ratingStars === 0 || ratingSubmitting}
+                            onPress={handleSubmitRating}
+                        >
+                            {ratingSubmitting ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={s.ratingSubmitBtnText}>Submit Rating</Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -455,6 +594,25 @@ const s = StyleSheet.create({
     sendBtnT: { fontSize: 11, fontWeight: '700', color: '#fff' },
 
     overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.7)', justifyContent: 'center', alignItems: 'center', borderRadius: 10 },
+
+    // Rating button & banner
+    rateBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#FFF9E6', borderWidth: 1, borderColor: '#FFD700', borderRadius: 10, paddingVertical: 10, marginBottom: 10 },
+    rateBtnText: { fontSize: 14, fontWeight: '700', color: '#B8860B' },
+    ratedBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(52,199,89,0.08)', padding: 10, borderRadius: 10, marginBottom: 10 },
+    ratedBannerText: { fontSize: 13, fontWeight: '600', color: '#34C759' },
+
+    // Rating modal
+    ratingOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    ratingModal: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+    ratingModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+    ratingModalTitle: { fontSize: 20, fontWeight: '800', color: '#1C1C1E' },
+    ratingPrompt: { fontSize: 15, color: '#636366', marginBottom: 20, lineHeight: 22 },
+    ratingStarsRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 8 },
+    ratingStarLabel: { textAlign: 'center', fontSize: 14, fontWeight: '700', color: '#FFD700', marginBottom: 16 },
+    ratingInput: { backgroundColor: '#F2F2F7', borderRadius: 12, padding: 14, fontSize: 14, color: '#1C1C1E', minHeight: 80, textAlignVertical: 'top', marginBottom: 4 },
+    ratingCharCount: { textAlign: 'right', fontSize: 11, color: '#AEAEB2', marginBottom: 16 },
+    ratingSubmitBtn: { backgroundColor: '#007AFF', borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
+    ratingSubmitBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });
 
 export default SubmissionPanel;

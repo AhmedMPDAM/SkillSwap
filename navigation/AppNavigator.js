@@ -9,6 +9,9 @@ import CreateExchangeRequest from '../screens/Marketplace/CreateExchangeRequest'
 import ExchangeRequestDetail from '../screens/Marketplace/ExchangeRequestDetail';
 import TopRatedScreen from '../screens/TopRated/TopRated';
 import ProfileScreen from '../screens/Profile/Profile';
+import CreditHistoryScreen from '../screens/Profile/CreditHistoryScreen';
+import ReceivedRatingsScreen from '../screens/Profile/ReceivedRatingsScreen';
+import UserPublicProfile from '../screens/Profile/UserPublicProfile';
 import AdminDashboard from '../screens/Admin/AdminDashboard';
 import CategoryManagement from '../screens/Admin/CategoryManagement';
 import ExaminerDashboard from '../screens/Admin/ExaminerDashboard';
@@ -97,6 +100,21 @@ const AppNavigator = () => {
                 options={{
                     animationEnabled: true,
                 }}
+            />
+            <Stack.Screen
+                name="CreditHistory"
+                component={CreditHistoryScreen}
+                options={{ animationEnabled: true }}
+            />
+            <Stack.Screen
+                name="ReceivedRatings"
+                component={ReceivedRatingsScreen}
+                options={{ animationEnabled: true }}
+            />
+            <Stack.Screen
+                name="UserPublicProfile"
+                component={UserPublicProfile}
+                options={{ animationEnabled: true }}
             />
             <Stack.Screen
                 name="AdminDashboard"

@@ -31,6 +31,9 @@ const ProfileScreen = ({ navigation }) => {
     const [saving, setSaving] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
+    // Stats & reputation
+    const [stats, setStats] = useState(null);
+
     // Profile fields
     const [fullName, setFullName] = useState('');
     const [bio, setBio] = useState('');
@@ -64,7 +67,56 @@ const ProfileScreen = ({ navigation }) => {
 
     useEffect(() => {
         fetchProfile();
+        fetchStats();
     }, []);
+
+    const fetchStats = async () => {
+        try {
+            const accessToken = await tokenStorage.getAccessToken();
+            if (!accessToken) return;
+
+            const response = await fetch(`${API_URL}/profile/stats`, {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true',
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setStats(data);
+            }
+        } catch (error) {
+            console.error('Error fetching stats:', error);
+        }
+    };
+
+    const getBadgeColor = (threshold) => {
+        switch (threshold) {
+            case 5: return { bg: '#E3F2FD', text: '#1565C0', border: '#90CAF9' };
+            case 10: return { bg: '#E8F5E9', text: '#2E7D32', border: '#A5D6A7' };
+            case 25: return { bg: '#FFF3E0', text: '#E65100', border: '#FFCC80' };
+            case 50: return { bg: '#F3E5F5', text: '#6A1B9A', border: '#CE93D8' };
+            case 100: return { bg: '#FCE4EC', text: '#C62828', border: '#EF9A9A' };
+            default: return { bg: '#F5F5F5', text: '#616161', border: '#BDBDBD' };
+        }
+    };
+
+    const renderStars = (stars, size = 16) => {
+        const els = [];
+        for (let i = 1; i <= 5; i++) {
+            els.push(
+                <Ionicons
+                    key={i}
+                    name={i <= stars ? 'star' : i - 0.5 <= stars ? 'star-half' : 'star-outline'}
+                    size={size}
+                    color={i <= stars || i - 0.5 <= stars ? '#FFD700' : '#D1D1D6'}
+                />
+            );
+        }
+        return <View style={{ flexDirection: 'row', gap: 2 }}>{els}</View>;
+    };
 
     // Helper function to construct full image URL
     const getImageUrl = (imagePath) => {
@@ -617,6 +669,106 @@ const ProfileScreen = ({ navigation }) => {
                         </TouchableOpacity>
                         <Text style={styles.profileName}>{fullName || 'Your Name'}</Text>
                     </View>
+
+                    {/* ── Stats & Reputation ──────────────────────────── */}
+                    {stats && (
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Reputation & Stats</Text>
+
+                            {/* Stats Row */}
+                            <View style={styles.statsRow}>
+                                <View style={styles.statBox}>
+                                    <View style={[styles.statIconBg, { backgroundColor: '#FFF9E6' }]}>
+                                        <Ionicons name="star" size={20} color="#FFD700" />
+                                    </View>
+                                    <Text style={styles.statValue}>
+                                        {stats.averageRating > 0 ? stats.averageRating : '—'}
+                                    </Text>
+                                    <Text style={styles.statLabel}>Rating</Text>
+                                    {stats.averageRating > 0 && renderStars(Math.round(stats.averageRating), 12)}
+                                </View>
+
+                                <View style={styles.statDivider} />
+
+                                <View style={styles.statBox}>
+                                    <View style={[styles.statIconBg, { backgroundColor: '#E8FAE8' }]}>
+                                        <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+                                    </View>
+                                    <Text style={styles.statValue}>{stats.completedExchanges}</Text>
+                                    <Text style={styles.statLabel}>Completed</Text>
+                                </View>
+
+                                <View style={styles.statDivider} />
+
+                                <View style={styles.statBox}>
+                                    <View style={[styles.statIconBg, { backgroundColor: '#E3F2FD' }]}>
+                                        <Ionicons name="chatbubbles" size={20} color="#007AFF" />
+                                    </View>
+                                    <Text style={styles.statValue}>{stats.totalRatings}</Text>
+                                    <Text style={styles.statLabel}>Reviews</Text>
+                                </View>
+                            </View>
+
+                            {/* Badges */}
+                            {stats.badges && stats.badges.length > 0 && (
+                                <View style={{ marginTop: 14 }}>
+                                    <Text style={[styles.label, { marginBottom: 10 }]}>Badges Earned</Text>
+                                    <View style={styles.badgesRow}>
+                                        {stats.badges.map((badge, index) => {
+                                            const c = getBadgeColor(badge.threshold);
+                                            return (
+                                                <View
+                                                    key={index}
+                                                    style={[
+                                                        styles.badgeChip,
+                                                        { backgroundColor: c.bg, borderColor: c.border },
+                                                    ]}
+                                                >
+                                                    <Ionicons name={badge.icon} size={16} color={c.text} />
+                                                    <Text style={[styles.badgeChipText, { color: c.text }]}>
+                                                        {badge.label}
+                                                    </Text>
+                                                </View>
+                                            );
+                                        })}
+                                    </View>
+                                </View>
+                            )}
+
+                            {/* Next Badge Progress */}
+                            {stats.nextBadge && (
+                                <View style={styles.nextBadgeBar}>
+                                    <Ionicons name="flag-outline" size={14} color="#8E8E93" />
+                                    <Text style={styles.nextBadgeText}>
+                                        {stats.nextBadge.remaining} more exchange{stats.nextBadge.remaining !== 1 ? 's' : ''} until "{stats.nextBadge.label}"
+                                    </Text>
+                                </View>
+                            )}
+
+                            {/* Quick Links */}
+                            <View style={styles.quickLinksRow}>
+                                <TouchableOpacity
+                                    style={styles.quickLink}
+                                    onPress={() => navigation.navigate('CreditHistory')}
+                                >
+                                    <Ionicons name="receipt-outline" size={18} color="#007AFF" />
+                                    <Text style={styles.quickLinkText}>Credit History</Text>
+                                    <Ionicons name="chevron-forward" size={16} color="#C7C7CC" />
+                                </TouchableOpacity>
+
+                                <View style={styles.quickLinkDivider} />
+
+                                <TouchableOpacity
+                                    style={styles.quickLink}
+                                    onPress={() => navigation.navigate('ReceivedRatings')}
+                                >
+                                    <Ionicons name="star-outline" size={18} color="#007AFF" />
+                                    <Text style={styles.quickLinkText}>My Ratings</Text>
+                                    <Ionicons name="chevron-forward" size={16} color="#C7C7CC" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
 
                     {/* Basic Information */}
                     <View style={styles.section}>
@@ -1219,6 +1371,100 @@ const styles = StyleSheet.create({
     },
     spacing: {
         height: 20,
+    },
+    // ── Stats & Reputation styles ───────────────────────────────────────────
+    statsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FAFAFA',
+        borderRadius: 14,
+        padding: 14,
+    },
+    statBox: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    statIconBg: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    statValue: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: '#1C1C1E',
+    },
+    statLabel: {
+        fontSize: 11,
+        color: '#8E8E93',
+        fontWeight: '500',
+        marginTop: 2,
+        marginBottom: 2,
+    },
+    statDivider: {
+        width: 1,
+        height: 50,
+        backgroundColor: '#E5E5EA',
+        marginHorizontal: 4,
+    },
+    badgesRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    badgeChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderRadius: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        gap: 6,
+    },
+    badgeChipText: {
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    nextBadgeBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F2F2F7',
+        borderRadius: 10,
+        padding: 10,
+        marginTop: 12,
+        gap: 8,
+    },
+    nextBadgeText: {
+        fontSize: 12,
+        color: '#636366',
+        flex: 1,
+        lineHeight: 16,
+    },
+    quickLinksRow: {
+        marginTop: 14,
+        backgroundColor: '#FAFAFA',
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    quickLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 14,
+        gap: 10,
+    },
+    quickLinkText: {
+        flex: 1,
+        fontSize: 15,
+        color: '#1C1C1E',
+        fontWeight: '500',
+    },
+    quickLinkDivider: {
+        height: 1,
+        backgroundColor: '#E5E5EA',
+        marginHorizontal: 14,
     },
 });
 

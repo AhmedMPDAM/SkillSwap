@@ -367,6 +367,11 @@ const ChatScreen = () => {
                     chatId={chatId}
                     isRequestOwner={isRequestOwner}
                     onExchangeCompleted={handleExchangeCompleted}
+                    otherUserId={
+                        isRequestOwner
+                            ? chatMeta?.proposerInfo?.id || ''
+                            : chatMeta?.requestOwnerInfo?.id || chatMeta?.requestOwnerId || ''
+                    }
                 />
             )}
 
