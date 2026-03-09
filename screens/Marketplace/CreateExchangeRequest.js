@@ -72,9 +72,9 @@ const CreateExchangeRequest = ({ navigation }) => {
 
     const complexities = [
         { value: 'simple', label: 'Simple (1x)', multiplier: 1 },
-        { value: 'moyen', label: 'Moyen (1.5x)', multiplier: 1.5 },
-        { value: 'complexe', label: 'Complexe (2x)', multiplier: 2 },
-        { value: 'tres_complexe', label: 'Très Complexe (2.5x)', multiplier: 2.5 },
+        { value: 'Meduim', label: 'Meduim (1.5x)', multiplier: 1.5 },
+        { value: 'advanced', label: 'advanced (2x)', multiplier: 2 },
+        { value: 'Expert', label: 'Expert(2.5x)', multiplier: 2.5 },
     ];
 
     useEffect(() => {
