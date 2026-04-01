@@ -62,7 +62,6 @@ const ProfileScreen = ({ navigation }) => {
         documentFile: null,
     });
 
-    const API_URL = 'https://zoologically-unindentured-sol.ngrok-free.dev/api';
     const BASE_URL = 'https://zoologically-unindentured-sol.ngrok-free.dev';
 
     useEffect(() => {
@@ -75,7 +74,7 @@ const ProfileScreen = ({ navigation }) => {
             const accessToken = await tokenStorage.getAccessToken();
             if (!accessToken) return;
 
-            const response = await fetch(`${API_URL}/profile/stats`, {
+            const response = await fetch(`${BASE_URL}/api/profile/stats`, {
                 headers: {
                     Authorization: `Bearer ${accessToken}`,
                     'Content-Type': 'application/json',
@@ -156,7 +155,7 @@ const ProfileScreen = ({ navigation }) => {
                 return;
             }
 
-            const response = await fetch(`${API_URL}/profile`, {
+            const response = await fetch(`${BASE_URL}/api/profile`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -347,7 +346,7 @@ const ProfileScreen = ({ navigation }) => {
                 }
             }
 
-            const response = await fetch(`${API_URL}/profile`, {
+            const response = await fetch(`${BASE_URL}/api/profile`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -408,7 +407,7 @@ const ProfileScreen = ({ navigation }) => {
                 });
             }
 
-            const response = await fetch(`${API_URL}/profile/certificates`, {
+            const response = await fetch(`${BASE_URL}/api/profile/certificates`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -456,7 +455,7 @@ const ProfileScreen = ({ navigation }) => {
                 });
             }
 
-            const response = await fetch(`${API_URL}/profile/certificates/${editingCertificate._id}`, {
+            const response = await fetch(`${BASE_URL}/api/profile/certificates/${editingCertificate._id}`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -494,7 +493,7 @@ const ProfileScreen = ({ navigation }) => {
                             setSaving(true);
                             const accessToken = await tokenStorage.getAccessToken();
 
-                            const response = await fetch(`${API_URL}/profile/certificates/${certificateId}`, {
+                            const response = await fetch(`${BASE_URL}/api/profile/certificates/${certificateId}`, {
                                 method: 'DELETE',
                                 headers: {
                                     'Authorization': `Bearer ${accessToken}`,
@@ -567,7 +566,7 @@ const ProfileScreen = ({ navigation }) => {
 
                             // Call backend logout endpoint
                             if (accessToken) {
-                                await fetch(`${API_URL}/auth/logout`, {
+                                await fetch(`${BASE_URL}/api/auth/logout`, {
                                     method: 'POST',
                                     headers: {
                                         'Authorization': `Bearer ${accessToken}`,

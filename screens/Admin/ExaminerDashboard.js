@@ -17,19 +17,18 @@ import { useFocusEffect } from '@react-navigation/native';
 import { tokenStorage } from '../../utils/tokenStorage';
 import { API_BASE_URL } from '../../config/apiConfig';
 
-// credit complexity color
 const complexityColors = {
     simple: '#34C759',
-    moyen: '#FF9500',
-    complexe: '#FF6B35',
-    tres_complexe: '#FF3B30',
+    medium: '#FF9500',
+    advanced: '#FF6B35',
+    expert: '#FF3B30',
 };
 
 const complexityLabel = {
     simple: 'Simple',
-    moyen: 'Medium',
-    complexe: 'Complex',
-    tres_complexe: 'Very Complex',
+    medium: 'Medium',
+    advanced: 'Advanced',
+    expert: 'Expert',
 };
 
 const ExaminerDashboard = ({ navigation }) => {
@@ -87,7 +86,7 @@ const ExaminerDashboard = ({ navigation }) => {
         const proposer = item.proposerId || {};
         const request = item.exchangeRequestId || {};
         const requestOwner = request.userId || {};
-        const complexity = request.complexity || 'moyen';
+        const complexity = request.complexity || 'medium';
         const color = complexityColors[complexity] || '#FF9500';
         const since = item.createdAt
             ? new Date(item.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })

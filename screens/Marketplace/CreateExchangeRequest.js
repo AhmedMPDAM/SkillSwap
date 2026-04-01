@@ -35,7 +35,7 @@ const CreateExchangeRequest = ({ navigation }) => {
     // Step 3: Time & Credits
     const [estimatedDuration, setEstimatedDuration] = useState('');
     const [desiredDeadline, setDesiredDeadline] = useState('');
-    const [complexity, setComplexity] = useState('moyen');
+    const [complexity, setComplexity] = useState('medium');
     const [location, setLocation] = useState('');
     const [estimatedCredits, setEstimatedCredits] = useState(0);
 
@@ -72,9 +72,9 @@ const CreateExchangeRequest = ({ navigation }) => {
 
     const complexities = [
         { value: 'simple', label: 'Simple (1x)', multiplier: 1 },
-        { value: 'Meduim', label: 'Meduim (1.5x)', multiplier: 1.5 },
-        { value: 'advanced', label: 'advanced (2x)', multiplier: 2 },
-        { value: 'Expert', label: 'Expert(2.5x)', multiplier: 2.5 },
+        { value: 'medium', label: 'Medium (1.5x)', multiplier: 1.5 },
+        { value: 'advanced', label: 'Advanced (2x)', multiplier: 2 },
+        { value: 'expert', label: 'Expert (2.5x)', multiplier: 2.5 },
     ];
 
     useEffect(() => {

@@ -272,11 +272,11 @@ const ChatScreen = () => {
             const proposerId = chatMeta.proposerInfo?.id;
             setIsRequestOwner(ownerId === currentUserId);
             setIsProposer(proposerId === currentUserId);
+            // Always show the submission panel so the rating modal is accessible
+            setShowSubmissionPanel(true);
             // Check if already completed
             if (chatMeta.status === 'completed' || chatMeta.isActive === false) {
                 setExchangeCompleted(chatMeta.status === 'completed');
-            } else {
-                setShowSubmissionPanel(true);
             }
         }
     }, [chatMeta, currentUserId]);
@@ -285,7 +285,6 @@ const ChatScreen = () => {
     const handleExchangeCompleted = useCallback(() => {
         setExchangeCompleted(true);
         setChatDisabled(true);
-        setShowSubmissionPanel(false);
         setExpiryLabel('Exchange completed ✓');
         // Close the chat room in Firestore
         try {
@@ -360,7 +359,7 @@ const ChatScreen = () => {
             ) : null}
 
             {/* ── Submission Panel (work submission & review) ── */}
-            {showSubmissionPanel && !exchangeCompleted && requestId && proposalId && (
+            {showSubmissionPanel && requestId && proposalId && (
                 <SubmissionPanel
                     requestId={requestId}
                     proposalId={proposalId}

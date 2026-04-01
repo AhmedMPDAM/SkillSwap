@@ -20,15 +20,15 @@ import { API_BASE_URL } from '../../config/apiConfig';
 
 const complexityColors = {
     simple: '#34C759',
-    moyen: '#FF9500',
-    complexe: '#FF6B35',
-    tres_complexe: '#FF3B30',
+    medium: '#FF9500',
+    advanced: '#FF6B35',
+    expert: '#FF3B30',
 };
 const complexityLabel = {
     simple: 'Simple',
-    moyen: 'Medium',
-    complexe: 'Complex',
-    tres_complexe: 'Very Complex',
+    medium: 'Medium',
+    advanced: 'Advanced',
+    expert: 'Expert',
 };
 
 const InfoRow = ({ icon, label, value, color }) => (
@@ -161,7 +161,7 @@ const ExaminerReviewDetail = ({ navigation, route }) => {
     const request = proposal?.exchangeRequestId || {};
     const requestOwner = request.userId || {};
     const proposer = proposal?.proposerId || {};
-    const complexity = request.complexity || 'moyen';
+    const complexity = request.complexity || 'medium';
     const complexityColor = complexityColors[complexity] || '#FF9500';
 
     const deadline = request.desiredDeadline
