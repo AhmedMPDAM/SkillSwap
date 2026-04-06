@@ -14,6 +14,10 @@ import ReceivedRatingsScreen from '../screens/Profile/ReceivedRatingsScreen';
 import UserPublicProfile from '../screens/Profile/UserPublicProfile';
 import AdminDashboard from '../screens/Admin/AdminDashboard';
 import CategoryManagement from '../screens/Admin/CategoryManagement';
+import UserManagement from '../screens/Admin/UserManagement';
+import UserDetailScreen from '../screens/Admin/UserDetailScreen';
+import ExchangeManagement from '../screens/Admin/ExchangeManagement';
+import ExchangeDetailScreen from '../screens/Admin/ExchangeDetailScreen';
 import ExaminerDashboard from '../screens/Admin/ExaminerDashboard';
 import ExaminerReviewDetail from '../screens/Admin/ExaminerReviewDetail';
 import ChatScreen from '../screens/Chat/ChatScreen';
@@ -126,6 +130,26 @@ const AppNavigator = () => {
             <Stack.Screen
                 name="CategoryManagement"
                 component={CategoryManagement}
+                options={{ animationEnabled: true }}
+            />
+            <Stack.Screen
+                name="UserManagement"
+                component={UserManagement}
+                options={{ animationEnabled: true }}
+            />
+            <Stack.Screen
+                name="UserDetail"
+                component={UserDetailScreen}
+                options={{ animationEnabled: true }}
+            />
+            <Stack.Screen
+                name="ExchangeManagement"
+                component={ExchangeManagement}
+                options={{ animationEnabled: true }}
+            />
+            <Stack.Screen
+                name="ExchangeDetail"
+                component={ExchangeDetailScreen}
                 options={{ animationEnabled: true }}
             />
             <Stack.Screen

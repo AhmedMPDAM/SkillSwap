@@ -11,7 +11,7 @@ import { API_BASE_URL } from '../../config/apiConfig';
 const { width } = Dimensions.get('window');
 
 const AdminDashboard = ({ navigation }) => {
-    const [stats, setStats] = useState({ users: 0, totalCredits: 0, requests: 0, pendingExaminations: 0 });
+    const [stats, setStats] = useState({ users: 0, totalCredits: 0, requests: 0, completedExchanges: 0, pendingExaminations: 0 });
     const [loading, setLoading] = useState(true);
     const [userRole, setUserRole] = useState(null);
 
@@ -113,6 +113,12 @@ const AdminDashboard = ({ navigation }) => {
                                 colors={['#fa709a', '#fee140']}
                             />
                             <StatusCard
+                                title="Completed Exchanges"
+                                count={stats.completedExchanges ?? 0}
+                                icon="checkmark-circle-outline"
+                                colors={['#11998e', '#38ef7d']}
+                            />
+                            <StatusCard
                                 title="Pending Reviews"
                                 count={stats.pendingExaminations ?? 0}
                                 icon="eye-outline"
@@ -170,7 +176,7 @@ const AdminDashboard = ({ navigation }) => {
 
                                 <TouchableOpacity
                                     style={styles.menuItem}
-                                    onPress={() => Alert.alert('Coming Soon', 'User management features will be here')}
+                                    onPress={() => navigation.navigate('UserManagement')}
                                     activeOpacity={0.7}
                                 >
                                     <View style={[styles.menuIcon, { backgroundColor: '#FFF3E0' }]}>
@@ -178,7 +184,22 @@ const AdminDashboard = ({ navigation }) => {
                                     </View>
                                     <View style={styles.menuTextContainer}>
                                         <Text style={styles.menuTitle}>Manage Users</Text>
-                                        <Text style={styles.menuSubtitle}>View user details and ban users</Text>
+                                        <Text style={styles.menuSubtitle}>View and manage all platform users</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.menuItem}
+                                    onPress={() => navigation.navigate('ExchangeManagement')}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={[styles.menuIcon, { backgroundColor: '#E8F5E9' }]}>
+                                        <Ionicons name="swap-horizontal-outline" size={24} color="#388E3C" />
+                                    </View>
+                                    <View style={styles.menuTextContainer}>
+                                        <Text style={styles.menuTitle}>Manage Exchanges</Text>
+                                        <Text style={styles.menuSubtitle}>View all exchanges and track growth</Text>
                                     </View>
                                     <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
                                 </TouchableOpacity>
