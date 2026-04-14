@@ -33,6 +33,7 @@ const AppNavigator = () => {
             initialRouteName="Login"
             screenOptions={{
                 headerShown: false,
+                cardStyle: { flex: 1 },
                 cardStyleInterpolator: ({ current: { progress } }) => ({
                     cardStyle: {
                         opacity: progress,

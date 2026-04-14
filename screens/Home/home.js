@@ -54,9 +54,8 @@ const HomeScreen = ({ navigation }) => {
 
     const quickActions = [
         { id: '1', label: 'Find Skills', icon: 'search-outline', color: '#4facfe' },
-        { id: '2', label: 'Teach Skills', icon: 'briefcase-outline', color: '#43e97b' },
-        { id: '3', label: 'Messages', icon: 'chatbubble-outline', color: '#fa709a' },
-        { id: '4', label: 'Settings', icon: 'settings-outline', color: '#ffa502' },
+        { id: '2', label: 'Messages', icon: 'chatbubble-outline', color: '#fa709a' },
+        { id: '3', label: 'Settings', icon: 'settings-outline', color: '#ffa502' },
     ];
 
     // ── Fetch user profile (credits + name) ──────────────────────────────
@@ -294,9 +293,7 @@ const HomeScreen = ({ navigation }) => {
             case 'Find Skills':
                 navigation.navigate('Marketplace');
                 break;
-            case 'Teach Skills':
-                Alert.alert('Teach Skills', 'Create a new skill listing');
-                break;
+
             case 'Messages':
                 navigation.navigate('Messages');
                 break;
@@ -735,7 +732,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#F2F2F7',
-        height: '100vh', // Ensures proper height on web
     },
     header: {
         flexDirection: 'row',
