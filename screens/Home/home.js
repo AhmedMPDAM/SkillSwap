@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -12,13 +12,17 @@ import {
     TextInput,
     FlatList,
     Animated,
+    ActivityIndicator,
+    RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { tokenStorage } from '../../utils/tokenStorage';
 import { useSocket } from '../../context/SocketContext';
+import { API_BASE_URL } from '../../config/apiConfig';
 
 const { width } = Dimensions.get('window');
 
@@ -26,38 +30,26 @@ const HomeScreen = ({ navigation }) => {
     const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0);
     const [menuVisible, setMenuVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [userCredits, setUserCredits] = useState(150);
-    const { unreadCount, clearNotifications } = useSocket();
+    const [userCredits, setUserCredits] = useState(null);
+    const [userName, setUserName] = useState('');
+    const { unreadCount, clearNotifications, notifications } = useSocket();
     const [userRole, setUserRole] = useState(null);
     const slideAnim = useRef(new Animated.Value(-width * 0.75)).current;
     const scrollViewRef = useRef(null);
 
-    useEffect(() => {
-        const fetchRole = async () => {
-            const role = await tokenStorage.getUserRole();
-            setUserRole(role);
-        };
-        fetchRole();
-    }, []);
+    // Dynamic data states
+    const [marketplaceItems, setMarketplaceItems] = useState([]);
+    const [topUsers, setTopUsers] = useState([]);
+    const [loadingCredits, setLoadingCredits] = useState(true);
+    const [loadingMarketplace, setLoadingMarketplace] = useState(true);
+    const [loadingTopUsers, setLoadingTopUsers] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
-    // Dummy Data
+    // Static data
     const features = [
         { id: '1', title: 'New Mentorship Program', color: ['#4facfe', '#00f2fe'], description: 'Connect with experienced mentors' },
         { id: '2', title: 'Advanced Skill Analytics', color: ['#43e97b', '#38f9d7'], description: 'Track your progress' },
         { id: '3', title: 'Community Events', color: ['#fa709a', '#fee140'], description: 'Join live sessions' },
-    ];
-
-    const marketplaceItems = [
-        { id: '1', title: 'Web Development', price: '15 Credits', image: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=500&q=80', category: 'Tech' },
-        { id: '2', title: 'Graphic Design', price: '10 Credits', image: 'https://images.unsplash.com/photo-1626785774573-4b799314346d?w=500&q=80', category: 'Design' },
-        { id: '3', title: 'Digital Marketing', price: '12 Credits', image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=500&q=80', category: 'Marketing' },
-        { id: '4', title: 'Photography', price: '20 Credits', image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&q=80', category: 'Creative' },
-    ];
-
-    const topUsers = [
-        { id: '1', name: 'Sarah J.', rating: 4.9, role: 'Web Developer', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80', status: 'Available' },
-        { id: '2', name: 'Mike T.', rating: 4.8, role: 'Graphic Designer', image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&q=80', status: 'Available' },
-        { id: '3', name: 'Emily R.', rating: 5.0, role: 'Digital Marketer', image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&q=80', status: 'Away' },
     ];
 
     const quickActions = [
@@ -67,11 +59,154 @@ const HomeScreen = ({ navigation }) => {
         { id: '4', label: 'Settings', icon: 'settings-outline', color: '#ffa502' },
     ];
 
-    const recentActivity = [
-        { id: '1', type: 'message', user: 'Sarah J.', action: 'sent you a message', time: '5 min ago' },
-        { id: '2', type: 'booking', user: 'Mike T.', action: 'booked your Web Dev class', time: '2 hours ago' },
-        { id: '3', type: 'review', user: 'Emily R.', action: 'left a 5-star review', time: '1 day ago' },
-    ];
+    // ── Fetch user profile (credits + name) ──────────────────────────────
+    const fetchUserProfile = useCallback(async () => {
+        try {
+            setLoadingCredits(true);
+            const token = await tokenStorage.getAccessToken();
+            if (!token) return;
+
+            const response = await fetch(`${API_BASE_URL}/api/profile`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true',
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setUserCredits(data.credits ?? 0);
+                setUserName(data.fullName || '');
+            }
+        } catch (error) {
+            console.error('Error fetching user profile:', error);
+        } finally {
+            setLoadingCredits(false);
+        }
+    }, []);
+
+    // ── Fetch marketplace requests ───────────────────────────────────────
+    const fetchMarketplace = useCallback(async () => {
+        try {
+            setLoadingMarketplace(true);
+            const token = await tokenStorage.getAccessToken();
+            if (!token) return;
+
+            const response = await fetch(
+                `${API_BASE_URL}/api/marketplace/requests/feed?page=1&limit=6`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'ngrok-skip-browser-warning': 'true',
+                    },
+                },
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                setMarketplaceItems(data.requests || []);
+            }
+        } catch (error) {
+            console.error('Error fetching marketplace:', error);
+        } finally {
+            setLoadingMarketplace(false);
+        }
+    }, []);
+
+    // ── Fetch top-rated users ────────────────────────────────────────────
+    const fetchTopUsers = useCallback(async () => {
+        try {
+            setLoadingTopUsers(true);
+            const token = await tokenStorage.getAccessToken();
+            if (!token) return;
+
+            const response = await fetch(
+                `${API_BASE_URL}/api/profile/top-rated?limit=3`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'ngrok-skip-browser-warning': 'true',
+                    },
+                },
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                setTopUsers(data.users || []);
+            }
+        } catch (error) {
+            console.error('Error fetching top users:', error);
+        } finally {
+            setLoadingTopUsers(false);
+        }
+    }, []);
+
+    // ── Initial load & refresh on focus ──────────────────────────────────
+    const loadAllData = useCallback(async () => {
+        const role = await tokenStorage.getUserRole();
+        setUserRole(role);
+        await Promise.all([fetchUserProfile(), fetchMarketplace(), fetchTopUsers()]);
+    }, [fetchUserProfile, fetchMarketplace, fetchTopUsers]);
+
+    useFocusEffect(
+        useCallback(() => {
+            loadAllData();
+        }, [loadAllData]),
+    );
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        await loadAllData();
+        setRefreshing(false);
+    }, [loadAllData]);
+
+    // ── Derive recent activity from real notifications ───────────────────
+    const getTimeAgo = (timestamp) => {
+        if (!timestamp) return '';
+        const now = new Date();
+        const date = new Date(timestamp);
+        const diffMs = now - date;
+        const diffMin = Math.floor(diffMs / 60000);
+        if (diffMin < 1) return 'Just now';
+        if (diffMin < 60) return `${diffMin} min ago`;
+        const diffHours = Math.floor(diffMin / 60);
+        if (diffHours < 24) return `${diffHours}h ago`;
+        const diffDays = Math.floor(diffHours / 24);
+        return `${diffDays}d ago`;
+    };
+
+    const getActivityIcon = (type) => {
+        switch (type) {
+            case 'proposal_received': return 'newspaper-outline';
+            case 'chat_ready': return 'chatbubble-outline';
+            case 'examiner_approved':
+            case 'examiner_approved_owner': return 'checkmark-circle-outline';
+            default: return 'notifications-outline';
+        }
+    };
+
+    const getActivityIconColor = (type) => {
+        switch (type) {
+            case 'proposal_received': return '#007AFF';
+            case 'chat_ready': return '#34C759';
+            case 'examiner_approved':
+            case 'examiner_approved_owner': return '#667eea';
+            default: return '#007AFF';
+        }
+    };
+
+    const recentActivity = (notifications || []).slice(0, 5);
+
+    // ── Helper to build image URLs ───────────────────────────────────────
+    const getImageUrl = (imagePath) => {
+        if (!imagePath) return null;
+        if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) return imagePath;
+        let cleanPath = imagePath.replace(/\\/g, '/');
+        if (cleanPath.startsWith('/')) cleanPath = cleanPath.substring(1);
+        if (cleanPath.startsWith('uploads/')) return `${API_BASE_URL}/${cleanPath}`;
+        return `${API_BASE_URL}/uploads/${cleanPath}`;
+    };
 
     // Toggle Menu with Animation
     const toggleMenu = () => {
@@ -339,6 +474,9 @@ const HomeScreen = ({ navigation }) => {
                 style={{ flex: 1 }}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#007AFF" />
+                }
             >
 
                 {/* Credit Balance Card */}
@@ -352,7 +490,11 @@ const HomeScreen = ({ navigation }) => {
                         <View style={styles.creditContent}>
                             <View>
                                 <Text style={styles.creditLabel}>Available Credits</Text>
-                                <Text style={styles.creditAmount}>{userCredits}</Text>
+                                {loadingCredits ? (
+                                    <ActivityIndicator size="small" color="#FFFFFF" style={{ marginTop: 8 }} />
+                                ) : (
+                                    <Text style={styles.creditAmount}>{userCredits ?? '—'}</Text>
+                                )}
                             </View>
                             <TouchableOpacity style={styles.addCreditsButton}>
                                 <Ionicons name="add-circle-outline" size={32} color="#FFFFFF" />
@@ -440,7 +582,7 @@ const HomeScreen = ({ navigation }) => {
                     </View>
                 </View>
 
-                {/* Marketplace Preview Section */}
+                {/* Marketplace Preview Section — Dynamic */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>Marketplace</Text>
@@ -448,25 +590,44 @@ const HomeScreen = ({ navigation }) => {
                             <Text style={styles.seeAllText}>See All</Text>
                         </TouchableOpacity>
                     </View>
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.horizontalScrollContent}
-                    >
-                        {marketplaceItems.map((item) => (
-                            <TouchableOpacity key={item.id} activeOpacity={0.9} style={styles.marketCard}>
-                                <Image source={{ uri: item.image }} style={styles.marketImage} />
-                                <View style={styles.marketContent}>
-                                    <Text style={styles.marketCategory}>{item.category}</Text>
-                                    <Text style={styles.marketTitle}>{item.title}</Text>
-                                    <Text style={styles.marketPrice}>{item.price}</Text>
-                                </View>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
+                    {loadingMarketplace ? (
+                        <ActivityIndicator size="small" color="#007AFF" style={{ paddingVertical: 30 }} />
+                    ) : marketplaceItems.length === 0 ? (
+                        <View style={styles.emptySection}>
+                            <Ionicons name="cart-outline" size={40} color="#D1D1D6" />
+                            <Text style={styles.emptySectionText}>No marketplace requests yet</Text>
+                        </View>
+                    ) : (
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.horizontalScrollContent}
+                        >
+                            {marketplaceItems.map((item) => (
+                                <TouchableOpacity
+                                    key={item._id}
+                                    activeOpacity={0.9}
+                                    style={styles.marketCard}
+                                    onPress={() => navigation.navigate('ExchangeRequestDetail', { requestId: item._id })}
+                                >
+                                    <View style={styles.marketImagePlaceholder}>
+                                        <Ionicons name="briefcase-outline" size={32} color="#007AFF" />
+                                    </View>
+                                    <View style={styles.marketContent}>
+                                        <Text style={styles.marketCategory}>{item.category || item.skillSearched || 'Skill'}</Text>
+                                        <Text style={styles.marketTitle} numberOfLines={1}>{item.title}</Text>
+                                        <View style={styles.marketCreditsRow}>
+                                            <Ionicons name="star" size={12} color="#FFA500" />
+                                            <Text style={styles.marketPrice}>{item.estimatedCredits} Credits</Text>
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    )}
                 </View>
 
-                {/* Top Rated Users Preview Section */}
+                {/* Top Rated Users Preview Section — Dynamic */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>Top Rated Users</Text>
@@ -474,51 +635,94 @@ const HomeScreen = ({ navigation }) => {
                             <Text style={styles.seeAllText}>See All</Text>
                         </TouchableOpacity>
                     </View>
-                    {topUsers.map((user) => (
-                        <TouchableOpacity key={user.id} activeOpacity={0.9} style={styles.userCard}>
-                            <View style={styles.userImageContainer}>
-                                <Image source={{ uri: user.image }} style={styles.userImage} />
-                                <View style={[styles.statusIndicator, user.status === 'Available' ? styles.statusAvailable : styles.statusAway]} />
-                            </View>
-                            <View style={styles.userInfo}>
-                                <Text style={styles.userName}>{user.name}</Text>
-                                <Text style={styles.userRole}>{user.role}</Text>
-                                <View style={styles.ratingContainer}>
-                                    <Ionicons name="star" size={14} color="#FFD700" />
-                                    <Text style={styles.userRating}>{user.rating}</Text>
-                                </View>
-                            </View>
-                            <TouchableOpacity style={styles.viewProfileButton}>
-                                <Text style={styles.viewProfileText}>View</Text>
-                                <Ionicons name="chevron-forward" size={16} color="#007AFF" />
-                            </TouchableOpacity>
-                        </TouchableOpacity>
-                    ))}
+                    {loadingTopUsers ? (
+                        <ActivityIndicator size="small" color="#007AFF" style={{ paddingVertical: 30 }} />
+                    ) : topUsers.length === 0 ? (
+                        <View style={styles.emptySection}>
+                            <Ionicons name="trophy-outline" size={40} color="#D1D1D6" />
+                            <Text style={styles.emptySectionText}>No rated users yet</Text>
+                        </View>
+                    ) : (
+                        topUsers.map((user) => {
+                            const profileImageUri = getImageUrl(user.profileImage);
+                            return (
+                                <TouchableOpacity
+                                    key={user._id}
+                                    activeOpacity={0.9}
+                                    style={styles.userCard}
+                                    onPress={() => navigation.navigate('UserPublicProfile', { userId: user._id })}
+                                >
+                                    <View style={styles.userImageContainer}>
+                                        {profileImageUri ? (
+                                            <Image source={{ uri: profileImageUri }} style={styles.userImage} />
+                                        ) : (
+                                            <View style={[styles.userImage, styles.userImagePlaceholder]}>
+                                                <Ionicons name="person" size={24} color="#C7C7CC" />
+                                            </View>
+                                        )}
+                                    </View>
+                                    <View style={styles.userInfo}>
+                                        <Text style={styles.userName} numberOfLines={1}>{user.fullName}</Text>
+                                        <Text style={styles.userRole} numberOfLines={1}>
+                                            {user.skills && user.skills.length > 0 ? user.skills.slice(0, 2).join(' · ') : 'Member'}
+                                        </Text>
+                                        <View style={styles.ratingContainer}>
+                                            <Ionicons name="star" size={14} color="#FFD700" />
+                                            <Text style={styles.userRating}>{user.averageRating}</Text>
+                                        </View>
+                                    </View>
+                                    <TouchableOpacity
+                                        style={styles.viewProfileButton}
+                                        onPress={() => navigation.navigate('UserPublicProfile', { userId: user._id })}
+                                    >
+                                        <Text style={styles.viewProfileText}>View</Text>
+                                        <Ionicons name="chevron-forward" size={16} color="#007AFF" />
+                                    </TouchableOpacity>
+                                </TouchableOpacity>
+                            );
+                        })
+                    )}
                 </View>
 
-                {/* Recent Activity Section */}
+                {/* Recent Activity Section — Dynamic from notifications */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Recent Activity</Text>
-                    {recentActivity.map((activity) => (
-                        <View key={activity.id} style={styles.activityItem}>
-                            <View style={styles.activityIcon}>
-                                <Ionicons
-                                    name={activity.type === 'message' ? 'chatbubble-outline' : activity.type === 'booking' ? 'calendar-outline' : 'star-outline'}
-                                    size={20}
-                                    color="#007AFF"
-                                />
-                            </View>
-                            <View style={styles.activityContent}>
-                                <Text style={styles.activityText}>
-                                    <Text style={styles.activityUser}>{activity.user}</Text>
-                                    {' '}
-                                    {activity.action}
-                                </Text>
-                                <Text style={styles.activityTime}>{activity.time}</Text>
-                            </View>
-                            <Ionicons name="chevron-forward" size={20} color="#D1D1D6" />
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Recent Activity</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
+                            <Text style={styles.seeAllText}>See All</Text>
+                        </TouchableOpacity>
+                    </View>
+                    {recentActivity.length === 0 ? (
+                        <View style={styles.emptySection}>
+                            <Ionicons name="notifications-off-outline" size={40} color="#D1D1D6" />
+                            <Text style={styles.emptySectionText}>No recent activity</Text>
                         </View>
-                    ))}
+                    ) : (
+                        recentActivity.map((activity) => (
+                            <TouchableOpacity
+                                key={activity.id}
+                                style={styles.activityItem}
+                                activeOpacity={0.8}
+                                onPress={() => navigation.navigate('Notifications')}
+                            >
+                                <View style={[styles.activityIcon, { backgroundColor: getActivityIconColor(activity.type) + '20' }]}>
+                                    <Ionicons
+                                        name={getActivityIcon(activity.type)}
+                                        size={20}
+                                        color={getActivityIconColor(activity.type)}
+                                    />
+                                </View>
+                                <View style={styles.activityContent}>
+                                    <Text style={styles.activityText} numberOfLines={2}>
+                                        {activity.message}
+                                    </Text>
+                                    <Text style={styles.activityTime}>{getTimeAgo(activity.timestamp)}</Text>
+                                </View>
+                                {!activity.read && <View style={styles.unreadDot} />}
+                                <Ionicons name="chevron-forward" size={20} color="#D1D1D6" />
+                            </TouchableOpacity>
+                        ))
+                    )}
                 </View>
 
                 <View style={styles.bottomSpacer} />
@@ -997,6 +1201,49 @@ const styles = StyleSheet.create({
     },
     bottomSpacer: {
         height: 40,
+    },
+    emptySection: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 30,
+        marginHorizontal: 20,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    emptySectionText: {
+        fontSize: 14,
+        color: '#8E8E93',
+        marginTop: 8,
+        fontWeight: '500',
+    },
+    marketImagePlaceholder: {
+        width: '100%',
+        height: 120,
+        backgroundColor: '#E3F2FD',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    marketCreditsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    userImagePlaceholder: {
+        backgroundColor: '#F2F2F7',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    unreadDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#007AFF',
+        marginRight: 8,
     },
 });
 

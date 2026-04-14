@@ -225,10 +225,7 @@ const ProfileScreen = ({ navigation }) => {
         try {
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                // IMPORTANT: Disable editing to avoid blob URIs
-                // allowsEditing: true,
-                // aspect: [1, 1],
-                quality: 1.0, // Use full quality since we're not editing
+                quality: 1.0,
             });
 
             if (!result.canceled) {
@@ -246,10 +243,7 @@ const ProfileScreen = ({ navigation }) => {
     const takePhoto = async () => {
         try {
             const result = await ImagePicker.launchCameraAsync({
-                // IMPORTANT: Disable editing to avoid blob URIs
-                // allowsEditing: true,
-                // aspect: [1, 1],
-                quality: 1.0, // Use full quality since we're not editing
+                quality: 1.0,
             });
 
             if (!result.canceled) {
@@ -301,7 +295,6 @@ const ProfileScreen = ({ navigation }) => {
             formData.append('location', location.trim());
             formData.append('socialLinks', JSON.stringify(socialLinks));
 
-            // Handle image upload
             if (profileImageFile && profileImageFile.uri) {
                 // Determine proper MIME type
                 let mimeType = 'image/jpeg'; // Default
