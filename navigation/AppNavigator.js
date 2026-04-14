@@ -23,6 +23,7 @@ import ExaminerReviewDetail from '../screens/Admin/ExaminerReviewDetail';
 import ChatScreen from '../screens/Chat/ChatScreen';
 import MessagesScreen from '../screens/Chat/MessagesScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
+import SettingsScreen from '../screens/Settings/SettingsScreen';
 
 const Stack = createStackNavigator();
 
@@ -179,6 +180,13 @@ const AppNavigator = () => {
             <Stack.Screen
                 name="Notifications"
                 component={NotificationsScreen}
+                options={{
+                    animationEnabled: true,
+                }}
+            />
+            <Stack.Screen
+                name="Settings"
+                component={SettingsScreen}
                 options={{
                     animationEnabled: true,
                 }}

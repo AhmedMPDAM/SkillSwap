@@ -14,9 +14,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { tokenStorage } from '../../utils/tokenStorage';
 import { API_BASE_URL } from '../../config/apiConfig';
 import Step2Skills from '../RegisterSteps/Step2Skills';
+import { SETTINGS_KEYS } from '../Settings/SettingsScreen';
 
 const CreateExchangeRequest = ({ navigation }) => {
     const [currentStep, setCurrentStep] = useState(1);
@@ -40,10 +42,44 @@ const CreateExchangeRequest = ({ navigation }) => {
     const [estimatedCredits, setEstimatedCredits] = useState(0);
 
     const [fetchedCategories, setFetchedCategories] = useState([]);
+    const [profileSkillsLoaded, setProfileSkillsLoaded] = useState(false);
 
     useEffect(() => {
         fetchCategories();
+        loadProfileSkills();
     }, []);
+
+    // Load the user's profile skills and auto-select them if the setting is enabled
+    const loadProfileSkills = async () => {
+        try {
+            // Check the auto-select setting
+            const autoSelectRaw = await AsyncStorage.getItem(SETTINGS_KEYS.AUTO_SELECT_SKILLS);
+            // Default to true if never set
+            const autoSelect = autoSelectRaw === null ? true : autoSelectRaw === 'true';
+            if (!autoSelect) return;
+
+            const token = await tokenStorage.getAccessToken();
+            if (!token) return;
+
+            const response = await fetch(`${API_BASE_URL}/api/profile`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true',
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.skills && Array.isArray(data.skills) && data.skills.length > 0) {
+                    setSelectedOfferedSkills(data.skills);
+                    setProfileSkillsLoaded(true);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading profile skills:', error);
+        }
+    };
 
     const fetchCategories = async () => {
         try {
@@ -389,6 +425,15 @@ const CreateExchangeRequest = ({ navigation }) => {
         <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
             <Text style={styles.stepTitle}>What You Offer</Text>
             <Text style={styles.stepSubtitle}>Select skills you can offer in exchange</Text>
+
+            {profileSkillsLoaded && (
+                <View style={styles.autoSelectBanner}>
+                    <Ionicons name="information-circle-outline" size={18} color="#007AFF" />
+                    <Text style={styles.autoSelectBannerText}>
+                        Your profile skills have been pre-selected. You can modify them below.
+                    </Text>
+                </View>
+            )}
 
             <Step2Skills
                 selectedSkills={selectedOfferedSkills}
@@ -808,6 +853,22 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: '#007AFF',
+    },
+    autoSelectBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#E3F2FD',
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 16,
+        gap: 8,
+    },
+    autoSelectBannerText: {
+        flex: 1,
+        fontSize: 13,
+        color: '#007AFF',
+        fontWeight: '500',
+        lineHeight: 18,
     },
 });
 
