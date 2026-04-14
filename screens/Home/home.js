@@ -394,37 +394,14 @@ const HomeScreen = ({ navigation }) => {
 
                     <TouchableOpacity
                         style={styles.menuItemFull}
-                        onPress={() => handleMenuNavigation('Bookings')}
-                    >
-                        <Ionicons name="calendar-outline" size={24} color="#fa709a" />
-                        <Text style={styles.menuItemText}>My Bookings</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.menuItemFull}
                         onPress={() => handleMenuNavigation('Settings')}
                     >
                         <Ionicons name="settings-outline" size={24} color="#ffa502" />
                         <Text style={styles.menuItemText}>Settings</Text>
                     </TouchableOpacity>
 
-                    <View style={styles.menuDivider} />
 
-                    <TouchableOpacity
-                        style={styles.menuItemFull}
-                        onPress={() => handleMenuNavigation('Help')}
-                    >
-                        <Ionicons name="help-circle-outline" size={24} color="#8E8E93" />
-                        <Text style={styles.menuItemText}>Help & Support</Text>
-                    </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={styles.menuItemFull}
-                        onPress={() => handleMenuNavigation('About')}
-                    >
-                        <Ionicons name="information-circle-outline" size={24} color="#8E8E93" />
-                        <Text style={styles.menuItemText}>About</Text>
-                    </TouchableOpacity>
                 </ScrollView>
 
                 {/* Disconnect Button */}

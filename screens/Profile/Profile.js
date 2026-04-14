@@ -259,14 +259,32 @@ const ProfileScreen = ({ navigation }) => {
         }
     };
 
+    const getCertificateDocMimeType = (asset) => {
+        if (asset?.mimeType) return asset.mimeType;
+        const n = (asset?.name || '').toLowerCase();
+        if (n.endsWith('.pdf')) return 'application/pdf';
+        if (n.endsWith('.doc')) return 'application/msword';
+        if (n.endsWith('.docx')) {
+            return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        }
+        return 'application/pdf';
+    };
+
     const pickDocument = async () => {
         try {
             const result = await DocumentPicker.getDocumentAsync({
-                type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+                type: [
+                    'application/pdf',
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                ],
+                copyToCacheDirectory: true,
             });
 
-            if (result.type === 'success') {
-                setCertificateForm({ ...certificateForm, documentFile: result });
+            // expo-document-picker v11+ returns { canceled, assets } (not type: 'success')
+            if (!result.canceled && result.assets?.length) {
+                const asset = result.assets[0];
+                setCertificateForm((prev) => ({ ...prev, documentFile: asset }));
             }
         } catch (error) {
             Alert.alert('Error', 'Failed to pick document');
@@ -393,10 +411,11 @@ const ProfileScreen = ({ navigation }) => {
             formData.append('issuedBy', certificateForm.issuedBy);
 
             if (certificateForm.documentFile) {
+                const doc = certificateForm.documentFile;
                 formData.append('document', {
-                    uri: certificateForm.documentFile.uri,
-                    type: certificateForm.documentFile.mimeType || 'application/pdf',
-                    name: certificateForm.documentFile.name,
+                    uri: doc.uri,
+                    type: getCertificateDocMimeType(doc),
+                    name: doc.name || `certificate-${Date.now()}.pdf`,
                 });
             }
 
@@ -441,10 +460,11 @@ const ProfileScreen = ({ navigation }) => {
             formData.append('issuedBy', certificateForm.issuedBy);
 
             if (certificateForm.documentFile) {
+                const doc = certificateForm.documentFile;
                 formData.append('document', {
-                    uri: certificateForm.documentFile.uri,
-                    type: certificateForm.documentFile.mimeType || 'application/pdf',
-                    name: certificateForm.documentFile.name,
+                    uri: doc.uri,
+                    type: getCertificateDocMimeType(doc),
+                    name: doc.name || `certificate-${Date.now()}.pdf`,
                 });
             }
 
