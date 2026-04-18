@@ -1,10 +1,8 @@
 // API Configuration
-// Update this URL to match your backend server
-export const API_BASE_URL = 'https://zoologically-unindentured-sol.ngrok-free.dev';
-
-// For network testing, use your computer's IP address:
-// export const API_BASE_URL = 'http://192.168.1.100:3000';
-
-// For ngrok (if using):
-// export const API_BASE_URL = 'https://your-ngrok-url.ngrok-free.dev';
+// The base URL is now pulled from the .env file for security
+// Ensure EXPO_PUBLIC_API_URL is set in your .env file
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+// Examples (Keep in .env instead of here):
+// EXPO_PUBLIC_API_URL=http://[IP_ADDRESS]
+// EXPO_PUBLIC_API_URL=https://your-ngrok-url.ngrok-free.dev
 

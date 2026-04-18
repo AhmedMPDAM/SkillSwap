@@ -17,6 +17,7 @@ import { useSocket } from '../context/SocketContext';
 import Step1Profile from './RegisterSteps/Step1Profile';
 import Step2Skills from './RegisterSteps/Step2Skills';
 import Step3Account from './RegisterSteps/Step3Account';
+import { API_BASE_URL } from '../config/apiConfig';
 
 const RegisterScreen = ({ navigation }) => {
     const [currentStep, setCurrentStep] = useState(1);
@@ -78,7 +79,7 @@ const RegisterScreen = ({ navigation }) => {
 
         setLoading(true);
         try {
-            const response = await fetch('https://zoologically-unindentured-sol.ngrok-free.dev/api/auth/register', {
+            const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

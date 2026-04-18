@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { tokenStorage } from '../utils/tokenStorage';
 import { useSocket } from '../context/SocketContext';
+import { API_BASE_URL } from '../config/apiConfig';
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
@@ -31,7 +32,7 @@ const LoginScreen = ({ navigation }) => {
 
         setLoading(true);
         try {
-            const response = await fetch('https://zoologically-unindentured-sol.ngrok-free.dev/api/auth/login', {
+            const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

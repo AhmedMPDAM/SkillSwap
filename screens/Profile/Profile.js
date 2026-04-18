@@ -20,6 +20,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { tokenStorage } from '../../utils/tokenStorage';
 import { useSocket } from '../../context/SocketContext';
+import { API_BASE_URL } from '../../config/apiConfig';
 
 
 
@@ -62,7 +63,6 @@ const ProfileScreen = ({ navigation }) => {
         documentFile: null,
     });
 
-    const BASE_URL = 'https://zoologically-unindentured-sol.ngrok-free.dev';
 
     useEffect(() => {
         fetchProfile();
@@ -74,7 +74,7 @@ const ProfileScreen = ({ navigation }) => {
             const accessToken = await tokenStorage.getAccessToken();
             if (!accessToken) return;
 
-            const response = await fetch(`${BASE_URL}/api/profile/stats`, {
+            const response = await fetch(`${API_BASE_URL}/api/profile/stats`, {
                 headers: {
                     Authorization: `Bearer ${accessToken}`,
                     'Content-Type': 'application/json',
@@ -136,11 +136,11 @@ const ProfileScreen = ({ navigation }) => {
 
         // If path already starts with 'uploads/', don't add it again
         if (cleanPath.startsWith('uploads/')) {
-            return `${BASE_URL}/${cleanPath}`;
+            return `${API_BASE_URL}/${cleanPath}`;
         }
 
         // Otherwise, assume it needs the uploads prefix
-        return `${BASE_URL}/uploads/${cleanPath}`;
+        return `${API_BASE_URL}/uploads/${cleanPath}`;
     };
 
     const fetchProfile = async () => {
@@ -155,7 +155,7 @@ const ProfileScreen = ({ navigation }) => {
                 return;
             }
 
-            const response = await fetch(`${BASE_URL}/api/profile`, {
+            const response = await fetch(`${API_BASE_URL}/api/profile`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -357,7 +357,7 @@ const ProfileScreen = ({ navigation }) => {
                 }
             }
 
-            const response = await fetch(`${BASE_URL}/api/profile`, {
+            const response = await fetch(`${API_BASE_URL}/api/profile`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -419,7 +419,7 @@ const ProfileScreen = ({ navigation }) => {
                 });
             }
 
-            const response = await fetch(`${BASE_URL}/api/profile/certificates`, {
+            const response = await fetch(`${API_BASE_URL}/api/profile/certificates`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -468,7 +468,7 @@ const ProfileScreen = ({ navigation }) => {
                 });
             }
 
-            const response = await fetch(`${BASE_URL}/api/profile/certificates/${editingCertificate._id}`, {
+            const response = await fetch(`${API_BASE_URL}/api/profile/certificates/${editingCertificate._id}`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -506,7 +506,7 @@ const ProfileScreen = ({ navigation }) => {
                             setSaving(true);
                             const accessToken = await tokenStorage.getAccessToken();
 
-                            const response = await fetch(`${BASE_URL}/api/profile/certificates/${certificateId}`, {
+                            const response = await fetch(`${API_BASE_URL}/api/profile/certificates/${certificateId}`, {
                                 method: 'DELETE',
                                 headers: {
                                     'Authorization': `Bearer ${accessToken}`,
@@ -579,7 +579,7 @@ const ProfileScreen = ({ navigation }) => {
 
                             // Call backend logout endpoint
                             if (accessToken) {
-                                await fetch(`${BASE_URL}/api/auth/logout`, {
+                                await fetch(`${API_BASE_URL}/api/auth/logout`, {
                                     method: 'POST',
                                     headers: {
                                         'Authorization': `Bearer ${accessToken}`,

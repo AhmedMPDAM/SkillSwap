@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import io from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { tokenStorage } from '../utils/tokenStorage';
+import { API_BASE_URL } from '../config/apiConfig';
 
 // Returns a per-user storage key so notifications are never shared between accounts
 const getNotificationsKey = (userId) => `@skillswap_notifications_${userId}`;
@@ -65,9 +66,7 @@ export const SocketProvider = ({ children }) => {
     };
 
     useEffect(() => {
-        const SOCKET_URL = 'https://zoologically-unindentured-sol.ngrok-free.dev';
-
-        const newSocket = io(SOCKET_URL, {
+        const newSocket = io(API_BASE_URL, {
             transports: ['websocket'],
             autoConnect: true,
         });
