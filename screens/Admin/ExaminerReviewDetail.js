@@ -71,8 +71,10 @@ const ExaminerReviewDetail = ({ navigation, route }) => {
             if (res.ok) {
                 const data = await res.json();
                 setProposal(data.proposal);
-                // Pre-fill credits with the request estimated credits
-                setAssignedCredits(String(data.proposal.exchangeRequestId?.estimatedCredits ?? ''));
+                // Pre-fill credits with the post-fee amount (estimatedCredits - 4)
+                const est = data.proposal.exchangeRequestId?.estimatedCredits ?? 0;
+                const postFee = Math.max(0, est - 4);
+                setAssignedCredits(String(postFee));
             } else {
                 Alert.alert('Error', 'Failed to load proposal details.');
                 navigation.goBack();
@@ -89,6 +91,9 @@ const ExaminerReviewDetail = ({ navigation, route }) => {
     const handleSubmit = async () => {
         if (submitting) return;
 
+        const est = proposal?.exchangeRequestId?.estimatedCredits ?? 0;
+        const postFeeCredits = Math.max(0, est - 4); // default payout after 4-credit exam fee
+
         const creditsToSend = modifyCredits ? Number(assignedCredits) : null;
         if (modifyCredits && (isNaN(creditsToSend) || creditsToSend <= 0)) {
             Alert.alert('Validation', 'Please enter a valid credit amount.');
@@ -99,7 +104,7 @@ const ExaminerReviewDetail = ({ navigation, route }) => {
             'Confirm Review',
             modifyCredits
                 ? `Approve this proposal with ${creditsToSend} credit(s)${examinerNote ? ' and a note' : ''}?`
-                : `Approve this proposal with the original estimated credits (${proposal?.exchangeRequestId?.estimatedCredits})?`,
+                : `Approve as-is? The proposer will receive ${postFeeCredits} credits (original ${est} − 4 exam fee).`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -243,6 +248,12 @@ const ExaminerReviewDetail = ({ navigation, route }) => {
                                         {request.estimatedCredits} credits
                                     </Text>
                                 </LinearGradient>
+                                <View style={[styles.examFeeChip]}>
+                                    <Ionicons name="shield-checkmark-outline" size={13} color="#FF9500" />
+                                    <Text style={styles.examFeeChipText}>
+                                        − 4 exam fee = {Math.max(0, (request.estimatedCredits || 0) - 4)} net
+                                    </Text>
+                                </View>
                                 <View style={[styles.complexityChip, { backgroundColor: complexityColor + '18', borderColor: complexityColor }]}>
                                     <View style={[styles.complexityDot, { backgroundColor: complexityColor }]} />
                                     <Text style={[styles.complexityChipText, { color: complexityColor }]}>
@@ -312,7 +323,7 @@ const ExaminerReviewDetail = ({ navigation, route }) => {
                             <View style={styles.inputBlock}>
                                 <Text style={styles.inputLabel}>
                                     Assigned Credits
-                                    <Text style={styles.inputHint}> (original: {request.estimatedCredits})</Text>
+                                    <Text style={styles.inputHint}> (original: {request.estimatedCredits}, post-fee default: {Math.max(0, (request.estimatedCredits || 0) - 4)})</Text>
                                 </Text>
                                 <View style={styles.creditInput}>
                                     <Ionicons name="star-outline" size={18} color="#007AFF" />
@@ -557,6 +568,23 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '700',
     },
+    examFeeChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        backgroundColor: '#FFF4E6',
+        borderWidth: 1.5,
+        borderColor: '#FF9500',
+        gap: 5,
+    },
+    examFeeChipText: {
+        color: '#FF9500',
+        fontSize: 13,
+        fontWeight: '700',
+    },
+
     complexityChip: {
         flexDirection: 'row',
         alignItems: 'center',
