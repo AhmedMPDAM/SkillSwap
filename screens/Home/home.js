@@ -585,7 +585,7 @@ const HomeScreen = ({ navigation }) => {
                                     onPress={() => navigation.navigate('ExchangeRequestDetail', { requestId: item._id })}
                                 >
                                     <View style={styles.marketImagePlaceholder}>
-                                        <Ionicons name="briefcase-outline" size={32} color="#007AFF" />
+                                        <Image source={{ uri: getImageUrl(item.image) }} style={styles.marketImage} />
                                     </View>
                                     <View style={styles.marketContent}>
                                         <Text style={styles.marketCategory}>{item.category || item.skillSearched || 'Skill'}</Text>

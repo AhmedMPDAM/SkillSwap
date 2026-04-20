@@ -26,6 +26,7 @@ const CreateExchangeRequest = ({ navigation }) => {
 
     // Step 1: Basic Info
     const [title, setTitle] = useState('');
+    const [image, setImage] = useState('');
     const [description, setDescription] = useState('');
     const [skillSearched, setSkillSearched] = useState('');
     const [category, setCategory] = useState('');
@@ -43,6 +44,25 @@ const CreateExchangeRequest = ({ navigation }) => {
 
     const [fetchedCategories, setFetchedCategories] = useState([]);
     const [profileSkillsLoaded, setProfileSkillsLoaded] = useState(false);
+
+
+    const pickImage = async () => {
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                quality: 1.0,
+            });
+
+            if (!result.canceled) {
+                const asset = result.assets[0];
+
+                setImage(asset.uri);
+            }
+        } catch (error) {
+            console.error('Error picking image:', error);
+            Alert.alert('Error', 'Failed to pick image');
+        }
+    };
 
     useEffect(() => {
         fetchCategories();
@@ -321,7 +341,19 @@ const CreateExchangeRequest = ({ navigation }) => {
                     maxLength={100}
                 />
             </View>
-
+            <View style={styles.inputGroup}>
+                <Text style={styles.label}>Image *</Text>
+                <TouchableOpacity onPress={pickImage} style={styles.imagePickerButton}>
+                    {image ? (
+                        <Image source={{ uri: image }} style={styles.selectedImage} />
+                    ) : (
+                        <View style={styles.imagePickerContent}>
+                            <Ionicons name="image-outline" size={24} color="#666" />
+                            <Text style={styles.imagePickerText}>Select Image</Text>
+                        </View>
+                    )}
+                </TouchableOpacity>
+            </View>
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Description *</Text>
                 <TextInput
